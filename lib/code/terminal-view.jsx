@@ -7,6 +7,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import '@xterm/xterm/css/xterm.css';
+import { SpinnerIcon } from '../chat/components/icons.js';
 
 const STATUS = { connected: '#22c55e', connecting: '#eab308', disconnected: '#ef4444' };
 const RECONNECT_INTERVAL = 3000;
@@ -111,7 +112,7 @@ export default function TerminalView({ codeWorkspaceId, ensureContainer }) {
     term.open(containerRef.current);
 
     const style = document.createElement('style');
-    style.textContent = '.xterm, .xterm-viewport { background-color: #1a1b26 !important; }';
+    style.textContent = '.xterm { padding: 5px; background-color: #1a1b26 !important; } .xterm-viewport { background-color: #1a1b26 !important; }';
     containerRef.current.appendChild(style);
 
     fitAddon.fit();
@@ -159,6 +160,13 @@ export default function TerminalView({ codeWorkspaceId, ensureContainer }) {
     };
   }, [connect, sendResize, codeWorkspaceId]);
 
+  const sendCommand = useCallback((text) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send('0' + text + '\r');
+    }
+  }, []);
+
   const handleReconnect = async () => {
     clearTimeout(retryTimer.current);
     if (wsRef.current) wsRef.current.close();
@@ -199,8 +207,13 @@ export default function TerminalView({ codeWorkspaceId, ensureContainer }) {
             textAlign: 'center',
             maxWidth: 420,
             wordBreak: 'break-word',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
           }}>
-            {containerError ? `Container error: ${containerError}` : 'Loading...'}
+            {containerError
+              ? `Container error: ${containerError}`
+              : <><SpinnerIcon size={16} /> Loading...</>}
           </div>
         )}
       </div>
@@ -218,6 +231,13 @@ export default function TerminalView({ codeWorkspaceId, ensureContainer }) {
       >
         <div />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => sendCommand('/commit-changes')}
+            disabled={!connected}
+            style={{ ...btnStyle, opacity: connected ? 1 : 0.4 }}
+          >
+            Commit
+          </button>
           <button onClick={handleReconnect} style={{ ...btnStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
             <div
               ref={statusRef}
