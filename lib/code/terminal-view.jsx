@@ -54,6 +54,10 @@ export default function TerminalView({ codeWorkspaceId, wsPath, isActive = true,
   const [connected, setConnected] = useState(false);
   const [containerError, setContainerError] = useState(null);
   const [termTheme, setTermTheme] = useState('dark');
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceText, setVoiceText] = useState('');
+  const [voiceInterim, setVoiceInterim] = useState('');
+  const recognitionRef = useRef(null);
 
   const setStatus = useCallback((color) => {
     if (statusRef.current) statusRef.current.style.backgroundColor = color;
@@ -313,6 +317,70 @@ export default function TerminalView({ codeWorkspaceId, wsPath, isActive = true,
     });
   }, [applyTheme]);
 
+  const startVoice = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      let final = '';
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      if (final) setVoiceText((prev) => (prev + ' ' + final).trim());
+      setVoiceInterim(interim);
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error !== 'aborted') console.error('Speech recognition error:', event.error);
+      setVoiceActive(false);
+    };
+
+    recognition.onend = () => {
+      setVoiceActive(false);
+      setVoiceInterim('');
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setVoiceActive(true);
+    setVoiceText('');
+    setVoiceInterim('');
+  }, []);
+
+  const stopVoice = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setVoiceActive(false);
+    setVoiceInterim('');
+  }, []);
+
+  const sendVoiceText = useCallback(() => {
+    const text = voiceText.trim();
+    if (text) sendCommand(text);
+    stopVoice();
+    setVoiceText('');
+  }, [voiceText, sendCommand, stopVoice]);
+
+  const cancelVoice = useCallback(() => {
+    stopVoice();
+    setVoiceText('');
+  }, [stopVoice]);
+
   const themeIcon = termTheme === 'light' ? (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
       <circle cx="8" cy="8" r="3" />
@@ -393,6 +461,81 @@ export default function TerminalView({ codeWorkspaceId, wsPath, isActive = true,
           color: #ef4444;
           background: rgba(239,68,68,0.08);
         }
+        .code-toolbar-btn--voice:hover {
+          border-color: rgba(244,114,182,0.3);
+          color: #f472b6;
+          background: rgba(244,114,182,0.08);
+        }
+        .code-toolbar-btn--voice-active {
+          border-color: rgba(239,68,68,0.4) !important;
+          color: #ef4444 !important;
+          background: rgba(239,68,68,0.1) !important;
+          animation: voice-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes voice-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.2); }
+          50% { box-shadow: 0 0 0 4px rgba(239,68,68,0.1); }
+        }
+        .voice-overlay {
+          position: absolute;
+          bottom: 52px;
+          left: 16px;
+          right: 16px;
+          z-index: 20;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--tb-border, rgba(169,177,214,0.15));
+          background: var(--voice-bg, #1a1b26);
+          font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+          font-size: 13px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .voice-overlay input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: inherit;
+          font-family: inherit;
+          font-size: inherit;
+        }
+        .voice-overlay input::placeholder {
+          opacity: 0.4;
+        }
+        .voice-overlay-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: 1px solid var(--tb-border, rgba(169,177,214,0.15));
+          color: var(--tb-color, #787c99);
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+        .voice-overlay-btn:hover {
+          color: var(--tb-hover, #a9b1d6);
+        }
+        .voice-overlay-btn--send:hover {
+          border-color: rgba(34,197,94,0.4);
+          color: #22c55e;
+          background: rgba(34,197,94,0.1);
+        }
+        .voice-overlay-btn--cancel:hover {
+          border-color: rgba(239,68,68,0.4);
+          color: #ef4444;
+          background: rgba(239,68,68,0.1);
+        }
+        .voice-interim {
+          opacity: 0.4;
+          font-style: italic;
+        }
       `}</style>
 
       <div className="mx-4 mb-4" style={{ position: 'relative', flex: 1, minHeight: 0 }}>
@@ -426,6 +569,37 @@ export default function TerminalView({ codeWorkspaceId, wsPath, isActive = true,
             </div>
           )}
 
+          {/* Voice-to-text overlay */}
+          {(voiceActive || voiceText) && (
+            <div className="voice-overlay" style={{ '--voice-bg': resolveTheme(termTheme).background, color: resolveTheme(termTheme).foreground }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, animation: voiceActive ? 'voice-pulse 1.5s ease-in-out infinite' : 'none' }}>
+                <rect x="5" y="1" width="6" height="8" rx="3" />
+                <path d="M3 7a5 5 0 0 0 10 0" />
+                <line x1="8" y1="12" x2="8" y2="15" />
+              </svg>
+              <input
+                type="text"
+                value={voiceText + (voiceInterim ? ' ' + voiceInterim : '')}
+                onChange={(e) => { setVoiceText(e.target.value); setVoiceInterim(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') sendVoiceText(); if (e.key === 'Escape') cancelVoice(); }}
+                placeholder="Listening..."
+                autoFocus
+              />
+              <button className="voice-overlay-btn voice-overlay-btn--send" onClick={sendVoiceText} title="Send to terminal">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="2" y1="8" x2="14" y2="8" />
+                  <polyline points="9,3 14,8 9,13" />
+                </svg>
+              </button>
+              <button className="voice-overlay-btn voice-overlay-btn--cancel" onClick={cancelVoice} title="Cancel">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <line x1="4" y1="4" x2="12" y2="12" />
+                  <line x1="12" y1="4" x2="4" y2="12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Toolbar */}
           {showToolbar && (
           <div
@@ -447,6 +621,18 @@ export default function TerminalView({ codeWorkspaceId, wsPath, isActive = true,
               >
                 {themeIcon}
                 {themeLabel}
+              </button>
+              <button
+                className={`code-toolbar-btn code-toolbar-btn--voice${voiceActive ? ' code-toolbar-btn--voice-active' : ''}`}
+                onClick={voiceActive ? stopVoice : startVoice}
+                title="Voice to text"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="1" width="6" height="8" rx="3" />
+                  <path d="M3 7a5 5 0 0 0 10 0" />
+                  <line x1="8" y1="12" x2="8" y2="15" />
+                </svg>
+                Voice
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
