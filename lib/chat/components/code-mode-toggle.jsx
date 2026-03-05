@@ -43,6 +43,7 @@ export function CodeModeToggle({
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [reposLoaded, setReposLoaded] = useState(false);
   const [togglingMode, setTogglingMode] = useState(false);
+  const [modeError, setModeError] = useState(null);
 
   // Load repos on first toggle-on
   const handleToggle = useCallback(() => {
@@ -84,13 +85,19 @@ export function CodeModeToggle({
   const handleModeToggle = useCallback(async () => {
     if (!workspace?.id || togglingMode || isInteractiveActive) return;
     setTogglingMode(true);
+    setModeError(null);
     try {
       // Only launch interactive mode — closing is handled from the code page
       const { startInteractiveMode } = await import('../../code/actions.js');
-      await startInteractiveMode(workspace.id);
+      const result = await startInteractiveMode(workspace.id);
+      if (result && !result.success) {
+        setModeError(result.message || 'Failed to start interactive mode');
+        return;
+      }
       if (onWorkspaceUpdate) await onWorkspaceUpdate();
     } catch (err) {
       console.error('Failed to toggle mode:', err);
+      setModeError(err.message || 'Failed to start interactive mode');
     } finally {
       setTogglingMode(false);
     }
@@ -125,7 +132,28 @@ export function CodeModeToggle({
         </div>
 
         {/* Right: mode toggle */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 gap-2">
+          {modeError && (
+            <div className="flex items-center gap-1.5 text-xs text-destructive max-w-[200px]">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <line x1="8" y1="5" x2="8" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="8" cy="11.5" r="0.75" fill="currentColor" />
+              </svg>
+              <span className="truncate" title={modeError}>{modeError}</span>
+              <button
+                type="button"
+                onClick={() => setModeError(null)}
+                className="shrink-0 hover:text-foreground transition-colors"
+                aria-label="Dismiss error"
+              >
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="4" y1="4" x2="12" y2="12" />
+                  <line x1="12" y1="4" x2="4" y2="12" />
+                </svg>
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={handleModeToggle}
