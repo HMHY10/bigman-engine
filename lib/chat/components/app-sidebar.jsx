@@ -103,24 +103,6 @@ export function AppSidebar({ user }) {
       {!collapsed && (
         <SidebarContent>
           <SidebarMenu>
-            {/* Chats history */}
-            <SidebarMenuItem>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <SidebarMenuButton
-                    href="/chats"
-                    className={collapsed ? 'justify-center' : ''}
-                  >
-                    <MessageIcon size={16} />
-                    {!collapsed && <span>Chats</span>}
-                  </SidebarMenuButton>
-                </TooltipTrigger>
-                {collapsed && (
-                  <TooltipContent side="right">Chats</TooltipContent>
-                )}
-              </Tooltip>
-            </SidebarMenuItem>
-
             {/* Clusters */}
             <SidebarMenuItem>
               <Tooltip>
@@ -135,6 +117,24 @@ export function AppSidebar({ user }) {
                 </TooltipTrigger>
                 {collapsed && (
                   <TooltipContent side="right">Clusters</TooltipContent>
+                )}
+              </Tooltip>
+            </SidebarMenuItem>
+
+            {/* Chats history */}
+            <SidebarMenuItem>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarMenuButton
+                    href="/chats"
+                    className={collapsed ? 'justify-center' : ''}
+                  >
+                    <MessageIcon size={16} />
+                    {!collapsed && <span>Chats</span>}
+                  </SidebarMenuButton>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">Chats</TooltipContent>
                 )}
               </Tooltip>
             </SidebarMenuItem>
