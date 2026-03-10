@@ -46,16 +46,17 @@ function groupChatsByDate(chats) {
   return groups;
 }
 
-const FILTERS = [
+const BASE_FILTERS = [
   { value: 'all', label: 'All', icon: null },
   { value: 'chat', label: 'Chat', icon: MessageIcon },
-  ...(process.env.NEXT_PUBLIC_CODE_WORKSPACE ? [{ value: 'code', label: 'Code', icon: CodeIcon }] : []),
 ];
+const CODE_FILTER = { value: 'code', label: 'Code', icon: CodeIcon };
 
-function ChatTypeFilter({ filter, setFilter }) {
+function ChatTypeFilter({ filter, setFilter, features }) {
+  const filters = features?.codeWorkspace ? [...BASE_FILTERS, CODE_FILTER] : BASE_FILTERS;
   return (
     <div className="flex items-center gap-0.5 px-2 pt-2 mb-1">
-      {FILTERS.map(({ value, label, icon: Icon }) => (
+      {filters.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
           onClick={() => setFilter(value)}
@@ -76,7 +77,7 @@ function ChatTypeFilter({ filter, setFilter }) {
 
 const isCodeChat = (chat) => Boolean(chat.codeWorkspaceId);
 
-export function SidebarHistory() {
+export function SidebarHistory({ features }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -185,7 +186,7 @@ export function SidebarHistory() {
       <>
         <SidebarGroup className="sticky top-0 z-10 bg-muted">
           <SidebarGroupContent>
-            <ChatTypeFilter filter={filter} setFilter={updateFilter} />
+            <ChatTypeFilter filter={filter} setFilter={updateFilter} features={features} />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
@@ -224,7 +225,7 @@ export function SidebarHistory() {
     <>
       <SidebarGroup className="sticky top-0 z-10 bg-muted">
         <SidebarGroupContent>
-          <ChatTypeFilter filter={filter} setFilter={updateFilter} />
+          <ChatTypeFilter filter={filter} setFilter={updateFilter} features={features} />
         </SidebarGroupContent>
       </SidebarGroup>
       {hasResults ? (

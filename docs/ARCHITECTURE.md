@@ -3,7 +3,7 @@
 thepopebot uses a two-layer architecture:
 
 1. **Event Handler** - Next.js application for webhooks, Telegram chat, and cron scheduling
-2. **Docker Agent** - Pi coding agent container for autonomous task execution
+2. **Docker Agent** - Coding agent container (Pi or Claude Code) for autonomous task execution
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
@@ -18,7 +18,7 @@ thepopebot uses a two-layer architecture:
 │           │                           ▼                              │
 │           │                  ┌─────────────────┐                     │
 │           │                  │  Docker Agent   │                     │
-│           │                  │  (runs Pi, PRs) │                     │
+│           │                  │ (Pi/Claude,PRs) │                     │
 │           │                  └────────┬────────┘                     │
 │           │                           │                              │
 │           │                           3 (creates PR)                 │
@@ -49,20 +49,25 @@ This is the user project structure after running `npx thepopebot init`:
 /
 ├── .github/workflows/
 │   ├── auto-merge.yml             # Auto-merges job PRs (checks AUTO_MERGE + ALLOWED_PATHS)
-│   ├── build-image.yml            # Builds and pushes Docker image to GHCR
 │   ├── notify-job-failed.yml      # Sends notification when a job fails
 │   ├── notify-pr-complete.yml     # Gathers job data and sends notification after merge
 │   ├── rebuild-event-handler.yml  # Rebuilds event handler after push to main
-│   └── run-job.yml                # Runs Docker agent on job/* branch creation
+│   ├── run-job.yml                # Runs Docker agent on job/* branch creation
+│   └── upgrade-event-handler.yml  # Upgrades thepopebot package in event handler
+├── .claude/                       # Claude Code settings
 ├── .pi/
 │   ├── extensions/                # Pi extensions (env-sanitizer for secret filtering)
 │   └── skills/                    # Custom skills for the agent
 ├── config/
 │   ├── SOUL.md                    # Agent identity and personality
-│   ├── JOB_PLANNING.md             # Event handler system prompt
+│   ├── JOB_PLANNING.md            # Event handler system prompt
 │   ├── JOB_SUMMARY.md             # Job summary prompt
+│   ├── JOB_AGENT.md               # Agent runtime environment
+│   ├── CODE_PLANNING.md           # Code workspace planning prompt
 │   ├── HEARTBEAT.md               # Self-monitoring
-│   ├── AGENT.md                   # Agent runtime environment
+│   ├── CLUSTER_SYSTEM_PROMPT.md   # Cluster system prompt
+│   ├── CLUSTER_ROLE_PROMPT.md     # Cluster role prompt
+│   ├── SKILL_BUILDING_GUIDE.md    # Guide for building skills
 │   ├── CRONS.json                 # Scheduled jobs
 │   └── TRIGGERS.json              # Webhook trigger definitions
 ├── app/
@@ -72,10 +77,19 @@ This is the user project structure after running `npx thepopebot init`:
 │   └── stream/chat/               # Chat streaming route
 ├── docker/
 │   ├── pi-coding-agent-job/
-│   │   ├── Dockerfile             # Pi coding agent container (customizable)
+│   │   ├── Dockerfile             # Pi coding agent container
 │   │   └── entrypoint.sh          # Container startup script
 │   ├── claude-code-job/
-│   │   ├── Dockerfile             # Claude Code CLI container
+│   │   ├── Dockerfile             # Claude Code CLI job container
+│   │   └── entrypoint.sh          # Container startup script
+│   ├── claude-code-headless/
+│   │   ├── Dockerfile             # Claude Code headless task container
+│   │   └── entrypoint.sh          # Container startup script
+│   ├── claude-code-workspace/
+│   │   ├── Dockerfile             # Interactive code workspace container
+│   │   └── entrypoint.sh          # Container startup script
+│   ├── claude-code-cluster-worker/
+│   │   ├── Dockerfile             # Cluster worker container
 │   │   └── entrypoint.sh          # Container startup script
 │   └── event-handler/
 │       └── Dockerfile             # Event handler container
@@ -83,6 +97,7 @@ This is the user project structure after running `npx thepopebot init`:
 ├── middleware.js                   # Auth middleware (re-exports from thepopebot)
 ├── cron/                          # Working dir for command-type cron jobs
 ├── triggers/                      # Working dir for command-type trigger scripts
+├── skills/                        # Plugin directories (activate via skills/active/ symlinks)
 ├── logs/                          # Per-job directories (job.md + session logs)
 ├── next.config.mjs                # Next.js config (wraps withThepopebot)
 ├── instrumentation.js             # Server startup hook (re-exports register)
@@ -108,6 +123,7 @@ The Event Handler is a Next.js API route handler that provides orchestration cap
 | `/api/telegram/register` | POST | Y | Register Telegram webhook URL |
 | `/api/github/webhook` | POST | N | Receives notifications from GitHub Actions (uses its own secret) |
 | `/api/jobs/status` | GET | Y | Check status of a running job |
+| `/api/cluster/:id/role/:id/webhook` | POST | Y | Trigger cluster role execution |
 
 API keys are database-backed and managed via the web UI Settings page. Use the `x-api-key` header for authentication.
 
@@ -148,7 +164,9 @@ curl -X POST https://your-app-url/api/telegram/register \
 - **`lib/triggers.js`** - Loads TRIGGERS.json and fires actions when watched paths are hit
 - **`lib/ai/`** - LLM integration (multi-provider chat, streaming, agent, tools)
 - **`lib/channels/`** - Channel adapter pattern for Telegram (and future channels)
-- **`lib/tools/`** - Job creation, GitHub API, Telegram, and OpenAI utilities
+- **`lib/tools/`** - Job creation, GitHub API, Telegram, Docker, and OpenAI utilities
+- **`lib/code/`** - Code workspaces (server actions, terminal view, WebSocket proxy)
+- **`lib/cluster/`** - Worker clusters (roles, triggers, Docker containers)
 
 ---
 
@@ -156,10 +174,10 @@ curl -X POST https://your-app-url/api/telegram/register \
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `build-image.yml` | Push to `main` (when `docker/pi-coding-agent-job/**` changes) | Builds Docker image, pushes to GHCR |
 | `run-job.yml` | `job/*` branch created | Runs Docker agent container |
 | `auto-merge.yml` | PR opened from `job/*` branch | Checks `AUTO_MERGE` + `ALLOWED_PATHS`, merges if allowed |
 | `rebuild-event-handler.yml` | Push to `main` | Rebuilds Next.js inside the event handler container |
+| `upgrade-event-handler.yml` | Manual / scheduled | Upgrades thepopebot package in the event handler |
 | `notify-pr-complete.yml` | After `auto-merge.yml` completes | Gathers job data, sends to event handler for notification |
 | `notify-job-failed.yml` | When `run-job.yml` fails | Sends failure notification to event handler |
 
@@ -176,12 +194,16 @@ curl -X POST https://your-app-url/api/telegram/register \
 
 ## Docker Agent
 
-The container executes tasks autonomously using the Pi coding agent.
+The container executes tasks autonomously using either the Pi coding agent or Claude Code CLI. The agent backend is selected via the `run-job.yml` workflow configuration.
+
+**Agent backends:**
+- **Pi coding agent** (`docker/pi-coding-agent-job/`) — Original agent with Puppeteer + Chromium
+- **Claude Code** (`docker/claude-code-job/`) — Anthropic's Claude Code CLI
 
 **Container includes:**
 - Node.js 22
-- Pi coding agent
-- Puppeteer + Chromium (headless browser, CDP on port 9222)
+- Selected coding agent (Pi or Claude Code)
+- Puppeteer + Chromium (headless browser, CDP on port 9222) — Pi agent only
 - Git + GitHub CLI
 
 **Environment Variables:**
@@ -196,14 +218,32 @@ The container executes tasks autonomously using the Pi coding agent.
 **Runtime Flow:**
 
 1. Extract Job ID from branch name
-2. Start Chrome in headless mode
+2. Start Chrome in headless mode (Pi agent)
 3. Decode and export secrets (filtered from LLM's bash)
 4. Decode and export LLM secrets (accessible to LLM)
 5. Configure Git credentials
 6. Clone repository branch
-7. Run Pi with SOUL.md + job.md
+7. Run agent with SOUL.md + job.md
 8. Commit all changes
 9. Create PR (auto-merge handled by `auto-merge.yml` workflow)
+
+---
+
+## Code Workspaces
+
+Interactive Docker containers (`docker/claude-code-workspace/`) with an in-browser terminal. Users can launch workspaces from the web UI to get a live shell into a development environment. Managed by `lib/code/` — includes server actions, WebSocket proxy for terminal I/O, and React UI components.
+
+---
+
+## Clusters
+
+Groups of Docker containers spawned from role definitions with webhook triggers. Each cluster has roles, and each role runs in a `docker/claude-code-cluster-worker/` container. Roles can be triggered via the `/api/cluster/:id/role/:id/webhook` endpoint. Managed by `lib/cluster/` — includes runtime orchestration, streaming, server actions, and React UI.
+
+---
+
+## Headless Mode
+
+For tasks that don't require a full job branch workflow, a headless container (`docker/claude-code-headless/`) can execute Claude Code tasks directly without creating a GitHub branch or PR. Useful for one-off tasks triggered from the event handler.
 
 ---
 

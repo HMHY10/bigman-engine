@@ -24,6 +24,7 @@ import { cn } from '../utils.js';
  * @param {Function} [props.onWorkspaceUpdate] - Callback to refresh workspace state after mode toggle
  */
 export function CodeModeToggle({
+  features,
   enabled,
   onToggle,
   repo,
@@ -100,7 +101,7 @@ export function CodeModeToggle({
     }
   }, [workspace?.id, togglingMode, isInteractiveActive, onWorkspaceUpdate]);
 
-  if (!process.env.NEXT_PUBLIC_CODE_WORKSPACE) return null;
+  if (!features?.codeWorkspace) return null;
 
   // Locked mode: show branch bar with feature branch + mode toggle
   if (locked && enabled) {

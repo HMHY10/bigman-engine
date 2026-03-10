@@ -10,7 +10,9 @@ The web chat interface is included out of the box at your APP_URL. No additional
 - **File uploads** — Send images, PDFs, and text files for the AI to process
 - **Chat history** — Browse past conversations grouped by date, resume any chat
 - **Job management** — Create and monitor agent jobs from the Runners page
-- **Notifications** — Job completion alerts with unread badges
+- **Code workspaces** — Launch interactive or headless coding sessions in Docker containers directly from chat
+- **Voice input** — Real-time voice transcription via AssemblyAI for hands-free messaging
+- **Notifications** — Job completion alerts with unread badges in the sidebar
 - **API key management** — Generate and manage API keys from Settings
 
 ### Telegram (Optional)

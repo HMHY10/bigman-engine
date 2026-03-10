@@ -4,9 +4,11 @@
 
 thepopebot includes several security measures by default:
 
-- **API key authentication** — All external `/api` routes require a valid `x-api-key` header. Keys are SHA-256 hashed in the database.
+- **API key authentication** — All external `/api` routes require a valid `x-api-key` header. Keys are SHA-256 hashed in the database and verified using timing-safe comparison.
 - **Webhook secret validation** — Telegram and GitHub webhook endpoints validate shared secrets. If a secret is not configured, the endpoint rejects all requests (fail-closed).
+- **Cluster webhook authentication** — Cluster role webhook endpoints (`/api/cluster/:clusterId/role/:roleId/webhook`) require a valid API key via `x-api-key` header, sharing the same auth gate as other external API routes.
 - **Session encryption** — Web sessions use JWT encrypted with `AUTH_SECRET`, stored in httpOnly cookies.
+- **Code workspace WebSocket authentication** — WebSocket upgrade requests for code workspace terminals validate the session by decoding the `authjs.session-token` cookie using `next-auth/jwt`. Unauthenticated upgrade requests are rejected with 401.
 - **Secret filtering in Docker agent** — The `env-sanitizer` extension filters `AGENT_*` secrets from the LLM's bash subprocess, preventing the agent from accessing protected credentials.
 - **Auto-merge path restrictions** — The `auto-merge.yml` workflow only merges PRs where all changed files fall within `ALLOWED_PATHS` (default: `/logs`). Changes outside allowed paths require manual review.
 - **Server Actions with session checks** — All browser-to-server mutations use Next.js Server Actions with `requireAuth()`, which validates the session cookie before executing.
@@ -19,8 +21,6 @@ We do our best to follow security best practices, but **all software carries ris
 - Managing your API keys and secrets
 - Reviewing agent-generated pull requests before merging outside `/logs`
 - Monitoring your agent's activity and resource usage
-
-For a detailed list of known security findings and their status, see [SECURITY_TODOS.md](SECURITY_TODOS.md).
 
 ## Running on a Local Machine
 
@@ -35,6 +35,7 @@ When your tunnel is active, the following endpoints are reachable from the inter
 | `/api/create-job` | Creates GitHub branches and triggers Docker agent jobs | API key required |
 | `/api/telegram/webhook` | Accepts incoming Telegram updates | Webhook secret required |
 | `/api/github/webhook` | Accepts GitHub Actions notifications | Webhook secret required |
+| `/api/cluster/:clusterId/role/:roleId/webhook` | Triggers a cluster role execution | API key required |
 | `/api/ping` | Health check | None (public) |
 | `/login` | Authentication page | None (public) |
 | `/stream/chat` | Chat streaming endpoint | Session cookie |

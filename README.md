@@ -38,7 +38,7 @@ Build autonomous AI agents that work for you 24/7, individually or in teams.
 │           │                           ▼                              │
 │           │                  ┌─────────────────┐                     │
 │           │                  │  Docker Agent   │                     │
-│           │                  │  (runs Pi, PRs) │                     │
+│           │                  │(Pi/Claude Code) │                     │
 │           │                  └────────┬────────┘                     │
 │           │                           │                              │
 │           │                           3 (creates PR)                 │
@@ -193,8 +193,8 @@ When you ran `thepopebot init` the first time, it scaffolded a project folder wi
 |-------|-------------|
 | `config/SOUL.md`, `JOB_PLANNING.md`, `JOB_AGENT.md`, etc. | Your agent's personality, behavior, and prompts |
 | `config/CRONS.json`, `TRIGGERS.json` | Your scheduled jobs and webhook triggers |
-| `app/` | Next.js pages and UI components |
 | `docker/pi-coding-agent-job/` | The Dockerfile for the Pi coding agent job container |
+| `docker/claude-code-job/` | The Dockerfile for the Claude Code agent job container |
 
 **Managed files** — These are infrastructure files that need to stay in sync with the package version. `init` auto-updates them for you:
 
@@ -204,6 +204,7 @@ When you ran `thepopebot init` the first time, it scaffolded a project folder wi
 | `docker-compose.yml` | Defines how your containers run together (Traefik, event handler, runner) |
 | `docker/event-handler/` | The Dockerfile for the event handler container |
 | `.dockerignore` | Keeps unnecessary files out of Docker builds |
+| `app/` | Next.js pages, layouts, and routes |
 | `CLAUDE.md` | AI assistant context for your project |
 
 #### What happens when you run `init`
@@ -271,6 +272,9 @@ All commands are run via `npx thepopebot <command>` (or the `npm run` shortcuts 
 |---------|-------------|
 | `diff [file]` | List files that differ from package templates, or diff a specific file |
 | `reset [file]` | List all template files, or restore a specific one to package default |
+| `upgrade` / `update` | Upgrade thepopebot (install, init, build, commit, push, restart Docker) |
+| `sync <path>` | Sync local package to a test install (build, pack, Docker) |
+| `user:password <email>` | Change a user's password |
 
 **Secrets & variables:**
 
@@ -320,6 +324,10 @@ See [Running Different Models](docs/RUNNING_DIFFERENT_MODELS.md) for the full gu
 | [Claude Code vs Pi](docs/CLAUDE_CODE_VS_PI.md) | Comparing the two agent backends (subscription vs API credits) |
 | [How to Build Skills](docs/HOW_TO_BUILD_SKILLS.md) | Guide to building and activating agent skills |
 | [Pre-Release](docs/PRE_RELEASE.md) | Installing beta/alpha builds |
+| [Code Workspaces](docs/CODE_WORKSPACES.md) | Interactive Docker containers with in-browser terminal |
+| [Clusters](docs/CLUSTERS.md) | Agent clusters — groups of Docker containers spawned from role definitions |
+| [Hacks](docs/HACKS.md) | Tips, tricks, and workarounds |
+| [Mobile Testing](docs/MOBILE_TESTING.md) | Testing on mobile devices |
 | [Security](docs/SECURITY.md) | Security disclaimer, local development risks |
 | [Upgrading](docs/UPGRADE.md) | Automated upgrades, recovering from failed upgrades |
 

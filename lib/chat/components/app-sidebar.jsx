@@ -19,7 +19,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip.js';
 import { useChatNav } from './chat-nav-context.js';
 
-export function AppSidebar({ user }) {
+export function AppSidebar({ user, features }) {
   const { navigateToChat } = useChatNav();
   const { state, open, setOpenMobile, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
@@ -122,6 +122,7 @@ export function AppSidebar({ user }) {
             </SidebarMenuItem>
 
             {/* Clusters */}
+            {features?.clusterWorkspace && (
             <SidebarMenuItem>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -138,6 +139,7 @@ export function AppSidebar({ user }) {
                 )}
               </Tooltip>
             </SidebarMenuItem>
+            )}
 
             {/* Runners */}
             <SidebarMenuItem>
@@ -275,7 +277,7 @@ export function AppSidebar({ user }) {
           </SidebarMenu>
 
           <div className="mx-4 border-t border-border" />
-          <SidebarHistory />
+          <SidebarHistory features={features} />
         </SidebarContent>
       )}
 

@@ -10,7 +10,13 @@ The `config/` directory is the agent's brain — it defines who the agent is and
 | `JOB_PLANNING.md` | Event handler system prompt |
 | `JOB_SUMMARY.md` | Prompt for summarizing completed jobs |
 | `HEARTBEAT.md` | Self-monitoring behavior |
-| `AGENT.md` | Agent runtime environment |
+| `JOB_AGENT.md` | Agent runtime environment |
+| `CODE_PLANNING.md` | System prompt for code workspace planning chat |
+| `CLUSTER_SYSTEM_PROMPT.md` | System prompt for cluster worker agents |
+| `CLUSTER_ROLE_PROMPT.md` | Per-role prompt template for cluster workers |
+| `WEB_SEARCH_AVAILABLE.md` | Injected when web search is available |
+| `WEB_SEARCH_UNAVAILABLE.md` | Injected when web search is not available |
+| `SKILL_BUILDING_GUIDE.md` | Reference guide for building new skills |
 | `CRONS.json` | Scheduled job definitions |
 | `TRIGGERS.json` | Webhook trigger definitions |
 
@@ -29,7 +35,10 @@ Visit your APP_URL to access the built-in web chat interface. Features include:
 - **Streaming responses** — AI responses stream in real-time
 - **File uploads** — Send images, PDFs, and text files
 - **Chat history** — Browse and resume past conversations
+- **Voice input** — Record and send voice messages directly from the browser
+- **Code workspaces** — Launch interactive coding environments with in-browser terminals
 - **Job management** — Create and monitor agent jobs from the Runners page
+- **Notifications** — Get notified when jobs complete or require attention
 
 The web chat is available out of the box after setup — no additional configuration needed.
 
@@ -79,19 +88,67 @@ Define recurring jobs in `config/CRONS.json`:
   {
     "name": "daily-check",
     "schedule": "0 9 * * *",
+    "type": "agent",
     "job": "Check for dependency updates",
     "enabled": true
+  },
+  {
+    "name": "cleanup-logs",
+    "schedule": "0 0 * * 0",
+    "type": "command",
+    "command": "ls -la logs/",
+    "enabled": false
+  },
+  {
+    "name": "daily-check-openai",
+    "schedule": "0 9 * * *",
+    "type": "agent",
+    "job": "Check for dependency updates",
+    "llm_provider": "openai",
+    "llm_model": "gpt-4o",
+    "enabled": false
   }
 ]
 ```
 
-Set `"enabled": true` to activate a scheduled job.
+Each cron entry requires a `type` field — one of `agent` (spawns a Docker agent job), `command` (runs a shell command), or `webhook` (sends an HTTP request). Agent jobs can override the default LLM by setting `llm_provider` and `llm_model`. Set `"enabled": true` to activate a scheduled job.
 
 ---
 
 ## Skills
 
 Add custom skills in `skills/` and activate them by symlinking into `skills/active/`. Both Pi and Claude Code discover skills from the same shared directory. Skills extend the agent's capabilities with specialized tools and behaviors.
+
+Each skill has a `SKILL.md` with YAML frontmatter (`name`, `description`) that the agent reads to understand when and how to use it.
+
+### Default Active Skills
+
+These are activated out of the box:
+
+| Skill | Description |
+|-------|-------------|
+| `browser-tools` | Interactive browser automation via Chrome DevTools Protocol |
+| `llm-secrets` | List available LLM-accessible credentials |
+| `modify-self` | Modify the agent's own code, configuration, personality, or cron jobs |
+
+### Available Skills
+
+These ship with the package but must be activated manually:
+
+| Skill | Description |
+|-------|-------------|
+| `brave-search` | Web search and content extraction via Brave Search API |
+| `google-docs` | Create and manage Google Docs on a shared drive via service account |
+| `google-drive` | Interact with Google Drive shared drives via service account |
+| `kie-ai` | Generate images and videos using kie.ai API |
+| `youtube-transcript` | Fetch transcripts from YouTube videos for summarization and analysis |
+
+To activate a skill:
+
+```bash
+cd skills/active
+ln -s ../skill-name skill-name
+```
 
 ---
 

@@ -10,7 +10,7 @@ import { Greeting } from './greeting.js';
 import { CodeModeToggle } from './code-mode-toggle.js';
 import { getRepositories, getBranches } from '../actions.js';
 
-export function Chat({ chatId, initialMessages = [], workspace = null }) {
+export function Chat({ chatId, initialMessages = [], workspace = null, features }) {
   const [input, setInput] = useState('');
   const [files, setFiles] = useState([]);
   const hasNavigated = useRef(false);
@@ -147,6 +147,7 @@ export function Chat({ chatId, initialMessages = [], workspace = null }) {
 
   const codeModeToggle = (
     <CodeModeToggle
+      features={features}
       enabled={codeMode}
       onToggle={setCodeMode}
       repo={repo}

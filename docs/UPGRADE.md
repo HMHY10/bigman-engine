@@ -1,6 +1,6 @@
 # Upgrading
 
-For the standard upgrade process (manual or automated), see [Manual Updating](../README.md#manual-updating) in the README. This document covers **how automated upgrades work** and **how to recover when something goes wrong**.
+For the standard upgrade process (manual or automated), see [Updating](../README.md#updating) in the README. This document covers **how automated upgrades work** and **how to recover when something goes wrong**.
 
 ## How Automated Upgrades Work
 

@@ -17,11 +17,7 @@ export function withThepopebot(nextConfig = {}) {
       'thepopebot',
       ...(nextConfig.transpilePackages || []),
     ],
-    env: {
-      ...nextConfig.env,
-      NEXT_PUBLIC_CODE_WORKSPACE: process.env.CLAUDE_CODE_OAUTH_TOKEN && process.env.BETA ? 'true' : '',
-    },
-    serverExternalPackages: [
+serverExternalPackages: [
       ...(nextConfig.serverExternalPackages || []),
       'better-sqlite3',
       'drizzle-orm',

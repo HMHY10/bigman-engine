@@ -18,11 +18,16 @@ All environment variables for the Event Handler (set in `.env` in your project r
 | `TELEGRAM_WEBHOOK_SECRET` | Secret for webhook validation | No |
 | `TELEGRAM_VERIFICATION` | Verification code for getting your chat ID | For Telegram setup |
 | `GH_WEBHOOK_SECRET` | Secret for GitHub Actions webhook auth | For notifications |
-| `LLM_PROVIDER` | LLM provider: `anthropic`, `openai`, or `google` (default: `anthropic`) | No |
+| `LLM_PROVIDER` | LLM provider: `anthropic`, `openai`, `google`, or `custom` (default: `anthropic`) | No |
 | `LLM_MODEL` | LLM model name override (provider-specific default if unset) | No |
+| `LLM_MAX_TOKENS` | Max tokens for LLM responses (default: `4096`) | No |
 | `ANTHROPIC_API_KEY` | API key for Anthropic provider | For anthropic provider |
 | `OPENAI_API_KEY` | API key for OpenAI provider / Whisper voice transcription | For openai provider or voice |
 | `GOOGLE_API_KEY` | API key for Google provider | For google provider |
+| `CUSTOM_API_KEY` | API key for custom OpenAI-compatible provider (not needed for local models) | For custom provider |
+| `OPENAI_BASE_URL` | Custom OpenAI-compatible base URL (e.g. `http://localhost:11434/v1` for Ollama) | For custom provider |
+| `WEB_SEARCH` | Set to `false` to disable web search tool (available for `anthropic` and `openai` only) | No |
+| `ASSEMBLYAI_API_KEY` | API key for AssemblyAI voice transcription (hides voice button if unset) | For voice input |
 | `DATABASE_PATH` | Override SQLite database location (default: `data/thepopebot.sqlite`) | No |
 | `THEPOPEBOT_VERSION` | Package version for Docker image tags (auto-set by setup) | No |
 | `LETSENCRYPT_EMAIL` | Email for Let's Encrypt SSL (docker-compose only) | No |
@@ -62,8 +67,10 @@ Configure in **Settings → Secrets and variables → Actions → Variables**:
 | `JOB_IMAGE_URL` | Docker image path for job agent (e.g., `ghcr.io/myorg/mybot`) | No | `stephengpope/thepopebot:pi-coding-agent-job-${THEPOPEBOT_VERSION}` |
 | `EVENT_HANDLER_IMAGE_URL` | Docker image path for event handler | No | `stephengpope/thepopebot:event-handler-${THEPOPEBOT_VERSION}` |
 | `RUNS_ON` | GitHub Actions runner label (e.g., `self-hosted`) | No | `ubuntu-latest` |
-| `LLM_PROVIDER` | LLM provider (`anthropic`, `openai`, `google`) | No | `anthropic` |
-| `LLM_MODEL` | LLM model name for the Pi agent | No | Provider default |
+| `LLM_PROVIDER` | LLM provider (`anthropic`, `openai`, `google`, `custom`) | No | `anthropic` |
+| `LLM_MODEL` | LLM model name for the agent | No | Provider default |
+| `OPENAI_BASE_URL` | Custom OpenAI-compatible base URL (for `custom` provider) | No | — |
+| `AGENT_BACKEND` | Agent runner: `pi` (API credits) or `claude-code` (subscription) | No | `pi` |
 
 ---
 

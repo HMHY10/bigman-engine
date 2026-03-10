@@ -5,7 +5,7 @@
 thepopebot has two layers that use LLMs independently:
 
 - **Event Handler** — powers web chat, Telegram responses, webhook processing, and job summaries. Configured via `.env` on your server.
-- **Jobs** — the Docker agent (Pi) that runs on GitHub Actions or a self-hosted runner. Configured via GitHub repo variables.
+- **Jobs** — the Docker agent (Pi or Claude Code) that runs on GitHub Actions or a self-hosted runner. Configured via GitHub repo variables.
 
 Because these are separate, you can run a capable model for interactive chat and a cheaper or local model for long-running jobs — or vice versa.
 

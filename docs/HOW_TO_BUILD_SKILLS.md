@@ -154,22 +154,39 @@ The built-in `brave-search` skill uses Node.js for HTML parsing (jsdom, readabil
 
 Uses **Chrome DevTools Protocol (CDP) directly** — not Playwright, not Puppeteer. Connects to Chrome running with `--remote-debugging-port=9222`. Standalone JS scripts:
 
+- `browser-start.js` — launch Chrome with remote debugging (`--profile` flag copies user's Chrome profile for cookies/logins)
 - `browser-nav.js` — navigate to URLs
+- `browser-content.js` — extract page content
 - `browser-eval.js` — execute JS in the active tab
-- `browser-search.js` — Google search
 - `browser-screenshot.js` — take screenshots
-- `browser-click.js` — click elements
-- `browser-picker.js` — interactive element selector
+- `browser-pick.js` — interactive element selector
+- `browser-cookies.js` — manage cookies
+- `browser-hn-scraper.js` — Hacker News scraper
 
-Requires a visible Chrome window with remote debugging enabled.
+Use `browser-start.js` to launch Chrome before other scripts. The `--profile` flag copies your default Chrome profile so the browser has your existing cookies and logins.
 
 ---
 
+## Bundled skills
+
+Skills are bundled in `templates/skills/` and scaffolded into user projects by `npx thepopebot init`:
+
+| Skill | Description |
+|-------|-------------|
+| brave-search | Web search and content extraction via Brave Search API |
+| browser-tools | Chrome automation via CDP (navigate, screenshot, eval, scrape) |
+| google-docs | Create and manage Google Docs on a shared drive via service account |
+| google-drive | Google Drive operations (list, upload, download, delete) via service account |
+| kie-ai | AI image and video generation via kie.ai API |
+| llm-secrets | Manage LLM-accessible secrets |
+| modify-self | Self-modification capabilities |
+| youtube-transcript | YouTube transcript extraction |
+
 ## Where to find more skills
 
-**Skills repo**: `https://github.com/badlogic/pi-skills`
+**External skills repo**: `https://github.com/badlogic/pi-skills`
 
-Available skills: brave-search, browser-tools, gccli (Google Calendar), gdcli (Google Drive), gmcli (Gmail), subagent, transcribe, vscode, youtube-transcript.
+Additional skills available there: gccli (Google Calendar), gmcli (Gmail), subagent, transcribe, vscode.
 
 These skills follow the **Agent Skills standard** (SKILL.md format), compatible with Pi, Claude Code, Codex CLI, Amp, and Droid.
 
@@ -200,5 +217,6 @@ Skills run via bash. The agent has access to environment variables, which means 
 
 | Resource | URL |
 |----------|-----|
-| Skills repo | https://github.com/badlogic/pi-skills |
+| Bundled skills | `templates/skills/` (in this repo) |
+| External skills repo | https://github.com/badlogic/pi-skills |
 | Skills format docs | https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/skills.md |
