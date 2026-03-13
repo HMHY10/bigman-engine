@@ -44,9 +44,9 @@ jobs:
             if [ -n "$OLD_TPB" ] && [ "$OLD_TPB" != "$NEW_TPB" ]; then
               # Version changed — run thepopebot init to scaffold new templates
               if echo "$NEW_TPB" | grep -q "-"; then
-                cd /project && npx --yes "thepopebot@${NEW_TPB}" init --no-install
+                cd /project && npx --yes "thepopebot@${NEW_TPB}" init
               else
-                cd /project && npx --yes thepopebot@latest init --no-install
+                cd /project && npx --yes thepopebot@latest init
               fi
 
               # Commit any template changes from init
