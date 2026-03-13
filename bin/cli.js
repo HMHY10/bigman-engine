@@ -641,7 +641,7 @@ async function upgrade() {
       const running = execSync('docker compose ps --status running -q', { encoding: 'utf8', cwd }).trim();
       if (running) {
         console.log('  Pulling new image and restarting Docker containers...\n');
-        execSync('docker compose pull event-handler && docker compose up -d', { stdio: 'inherit', cwd });
+        execSync('docker compose pull event-handler && docker compose up -d --force-recreate event-handler', { stdio: 'inherit', cwd });
       }
     } catch {
       // Docker not available or not running — skip
