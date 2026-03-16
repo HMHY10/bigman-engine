@@ -143,3 +143,12 @@ See `config/CLAUDE.md` for config file details and the `{{ include }}` / `{{vari
 - **GitHub repository variables** — read by `run-job.yml` (agent jobs). Set by `setup/lib/sync.mjs`.
 
 These are independent environments. They use the same variable names. They can hold different values (e.g. chat uses sonnet, jobs use opus). Do NOT create separate `AGENT_LLM_*` variable names — just set different values in `.env` vs GitHub variables.
+
+## ArryBarry Context
+
+This is the Bigman Engine for ArryBarry Health & Beauty. See SOUL.md for brand voice and operating principles.
+
+- All agent outputs should be written to Obsidian vault via the obsidian-sync skill
+- Use British English throughout
+- Never fabricate product information or supplier details
+- Flag uncertainty with ⚠️ REVIEW NEEDED tag

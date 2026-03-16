@@ -1,8 +1,8 @@
 {
-  "name": "thepopebot",
+  "name": "bigman-engine",
   "version": "1.2.74-beta.30",
   "type": "module",
-  "description": "Create autonomous AI agents with a two-layer architecture: Next.js Event Handler + Docker Agent.",
+  "description": "ArryBarry AI Operations - Autonomous Agent Engine (PopeBot fork)",
   "bin": {
     "thepopebot": "./bin/cli.js"
   },

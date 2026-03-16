@@ -1,0 +1,28 @@
+services:
+  event-handler:
+    container_name: bigman-event-handler
+    image: ${EVENT_HANDLER_IMAGE_URL:-stephengpope/thepopebot:event-handler-${THEPOPEBOT_VERSION:-1.2.74-beta.30}}
+    ports:
+      - "3004:80"
+    env_file:
+      - .env
+    volumes:
+      - .:/project
+      - ./config:/app/config
+      - ./skills:/app/skills
+      - ./.env:/app/.env
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./cron:/app/cron
+      - ./triggers:/app/triggers
+      - ./CLAUDE.md:/app/CLAUDE.md
+      - ./SOUL.md:/app/SOUL.md
+      - /var/run/docker.sock:/var/run/docker.sock
+    stop_grace_period: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
