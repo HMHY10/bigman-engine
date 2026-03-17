@@ -24,7 +24,10 @@ jobs:
       - name: Get thepopebot version
         id: version
         run: |
-          VERSION=$(jq -r '.packages["node_modules/thepopebot"].version // "latest"' package-lock.json)
+          if [ -f package-lock.json ]; then
+            VERSION=$(jq -r '.packages["node_modules/thepopebot"].version // empty' package-lock.json)
+          fi
+          VERSION="${VERSION:-${{ vars.THEPOPEBOT_VERSION || '1.2.74-beta.30' }}}"
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Read job config overrides
@@ -62,9 +65,14 @@ jobs:
             exit 1
           fi
 
-          # Mask all secret values in GitHub Actions logs
-          echo "$DOPPLER_SECRETS" | jq -r 'to_entries[] | .value' | while read -r val; do
-            if [ -n "$val" ]; then
+          # Mask only actual secrets (keys/tokens >20 chars) — not config values
+          # like "claude-code" or "anthropic" which corrupt image names if masked
+          echo "$DOPPLER_SECRETS" | jq -r '
+            to_entries[]
+            | select(.key | test("KEY|SECRET|TOKEN"; "i"))
+            | .value
+          ' | while read -r val; do
+            if [ -n "$val" ] && [ ${#val} -gt 20 ]; then
               echo "::add-mask::$val"
             fi
           done
