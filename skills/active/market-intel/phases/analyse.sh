@@ -179,8 +179,13 @@ $(echo "$content" | head -c 1000)"
     return 0
   fi
 
+  local raw_text
+  raw_text=$(echo "$response" | jq -r '.content[0].text // empty' | sed '/^```/d')
+
+  # LLM sometimes appends explanation after the JSON — extract just the JSON array
   local text
-  text=$(echo "$response" | jq -r '.content[0].text // empty' | sed '/^```/d')
+  text=$(echo "$raw_text" | grep -E '^\[' | head -1)
+  [ -z "$text" ] && text="$raw_text"
 
   if echo "$text" | jq '.' >/dev/null 2>&1; then
     local count
