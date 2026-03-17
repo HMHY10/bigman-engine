@@ -82,9 +82,13 @@ skills/active/obsidian-sync/sync.sh put-file "05-Agent-Outputs/Research/YYYY-MM-
 
 ## Output Format
 
-Every research brief MUST follow this structure:
+Every research brief MUST include YAML frontmatter with a `vault-path` field, followed by the brief content. This tells the vault sync service where to file the output in Obsidian.
 
 ```markdown
+---
+vault-path: 05-Agent-Outputs/Research/YYYY-MM-DD-slug-title.md
+---
+
 # Research: {title}
 
 **Date:** {YYYY-MM-DD}
@@ -112,6 +116,10 @@ Every research brief MUST follow this structure:
 ## Related Notes
 - [[relevant-vault-note]]
 ```
+
+**IMPORTANT:** The `vault-path` frontmatter is required. Set it to `05-Agent-Outputs/Research/{filename}` using the same `YYYY-MM-DD-slug-title.md` pattern as the filename. This ensures the vault-sync service files it correctly in Obsidian.
+
+If Obsidian is unreachable via obsidian-sync, save the brief as a file in the working directory. The vault-sync service will pick it up automatically after the job finishes and route it to the vault.
 
 ## Research Strategy
 

@@ -39,10 +39,27 @@ async function syncToVault(jobId, commitSha) {
     const data = await ghApi(`/repos/${GH_OWNER}/${GH_REPO}/contents/logs/${jobId}/${file.name}?ref=${commitSha}`);
     const content = Buffer.from(data.content, 'base64').toString('utf-8');
 
-    // Check frontmatter for explicit vault path
-    let vaultPath = `05-Agent-Outputs/${file.name}`;
-    const match = content.match(/^---\n[\s\S]*?vault-path:\s*(.+)\n[\s\S]*?---/);
-    if (match) vaultPath = match[1].trim();
+    // Determine vault path: frontmatter > content detection > default
+    let vaultPath = null;
+
+    // 1. Explicit vault-path in YAML frontmatter
+    const fmMatch = content.match(/^---\n[\s\S]*?vault-path:\s*(.+)\n[\s\S]*?---/);
+    if (fmMatch) {
+      vaultPath = fmMatch[1].trim();
+    }
+
+    // 2. Detect type from content and route to correct subfolder
+    if (!vaultPath) {
+      if (content.match(/^# Research:/m)) {
+        vaultPath = `05-Agent-Outputs/Research/${file.name}`;
+      } else if (content.match(/^# Content Draft:/m)) {
+        vaultPath = `05-Agent-Outputs/Content-Drafts/${file.name}`;
+      } else if (content.match(/^# Report:/m)) {
+        vaultPath = `05-Agent-Outputs/Reports/${file.name}`;
+      } else {
+        vaultPath = `05-Agent-Outputs/${file.name}`;
+      }
+    }
 
     const res = await fetch(`${OBSIDIAN_HOST}/vault/${vaultPath}`, {
       method: 'PUT',
