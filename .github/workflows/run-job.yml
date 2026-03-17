@@ -12,6 +12,12 @@ jobs:
       packages: read
 
     steps:
+      - name: Extract job ID
+        id: job
+        run: |
+          JOB_ID="${{ github.ref_name }}"
+          echo "id=${JOB_ID#job/}" >> $GITHUB_OUTPUT
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -33,9 +39,7 @@ jobs:
       - name: Read job config overrides
         id: job-config
         run: |
-          JOB_ID="${{ github.ref_name }}"
-          JOB_ID="${JOB_ID#job/}"
-          CONFIG_FILE="logs/${JOB_ID}/job.config.json"
+          CONFIG_FILE="logs/${{ steps.job.outputs.id }}/job.config.json"
           if [ -f "$CONFIG_FILE" ]; then
             echo "llm_provider=$(jq -r '.llm_provider // empty' "$CONFIG_FILE")" >> $GITHUB_OUTPUT
             echo "llm_model=$(jq -r '.llm_model // empty' "$CONFIG_FILE")" >> $GITHUB_OUTPUT
@@ -65,19 +69,7 @@ jobs:
             exit 1
           fi
 
-          # Mask only actual secrets (keys/tokens >20 chars) — not config values
-          # like "claude-code" or "anthropic" which corrupt image names if masked
-          echo "$DOPPLER_SECRETS" | jq -r '
-            to_entries[]
-            | select(.key | test("KEY|SECRET|TOKEN"; "i"))
-            | .value
-          ' | while read -r val; do
-            if [ -n "$val" ] && [ ${#val} -gt 20 ]; then
-              echo "::add-mask::$val"
-            fi
-          done
-
-          # Build SECRETS JSON (agent runtime secrets — keys the job container needs)
+          # Build SECRETS JSON for the job container (PopeBot entrypoint parses this)
           SECRETS=$(echo "$DOPPLER_SECRETS" | jq -c '{
             ANTHROPIC_API_KEY: .ANTHROPIC_API_KEY,
             BRAVE_API_KEY: .BRAVE_API_KEY,
@@ -86,14 +78,20 @@ jobs:
             OBSIDIAN_HOST: .OBSIDIAN_HOST,
             WEBHOOK_SECRET: .WEBHOOK_SECRET
           }')
-
-          # Export SECRETS JSON for container
           echo "SECRETS<<EOSECRETS" >> $GITHUB_ENV
           echo "$SECRETS" >> $GITHUB_ENV
           echo "EOSECRETS" >> $GITHUB_ENV
 
-          # Also export individual secrets as env vars (Claude Code needs ANTHROPIC_API_KEY directly)
-          echo "$DOPPLER_SECRETS" | jq -r 'to_entries[] | select(.key | test("DOPPLER_") | not) | "\(.key)=\(.value)"' | while IFS='=' read -r key val; do
+          # Export individual env vars — single jq pass for masking + export
+          echo "$DOPPLER_SECRETS" | jq -r '
+            to_entries[]
+            | select(.key | test("^DOPPLER_") | not)
+            | @text "\(.key)\t\(.value)"
+          ' | while IFS=$'\t' read -r key val; do
+            # Mask actual secrets (keys/tokens >20 chars), not config values
+            if echo "$key" | grep -qiE 'KEY|SECRET|TOKEN' && [ ${#val} -gt 20 ]; then
+              echo "::add-mask::$val"
+            fi
             echo "$key<<EOF_$key" >> $GITHUB_ENV
             echo "$val" >> $GITHUB_ENV
             echo "EOF_$key" >> $GITHUB_ENV
@@ -110,7 +108,7 @@ jobs:
         run: |
           AGENT_BACKEND="${AGENT_BACKEND:-pi}"
           if [ -n "$JOB_IMAGE_URL" ]; then
-            IMAGE="${JOB_IMAGE_URL}:latest"
+            IMAGE="${JOB_IMAGE_URL}:${THEPOPEBOT_VERSION}"
           elif [ "$AGENT_BACKEND" = "claude-code" ]; then
             IMAGE="stephengpope/thepopebot:claude-code-job-${THEPOPEBOT_VERSION}"
           else
@@ -118,7 +116,6 @@ jobs:
           fi
           echo "Using image: $IMAGE"
 
-          # LLM_SECRETS empty — model config comes from GitHub vars
           export LLM_SECRETS='{}'
 
           # The stock entrypoint unsets ANTHROPIC_API_KEY (designed for OAuth).
@@ -143,9 +140,6 @@ jobs:
       - name: Sync outputs to Obsidian vault
         if: always()
         run: |
-          JOB_ID="${{ github.ref_name }}"
-          JOB_ID="${JOB_ID#job/}"
-
           # Find the commit with job outputs (before the cleanup commit)
           LOG_SHA=$(curl -sf \
             "https://api.github.com/repos/${{ github.repository }}/commits?sha=${{ github.ref_name }}&per_page=3" \
@@ -157,13 +151,11 @@ jobs:
             exit 0
           fi
 
-          echo "Syncing job $JOB_ID outputs from commit $LOG_SHA to Obsidian vault..."
+          echo "Syncing job ${{ steps.job.outputs.id }} outputs to Obsidian vault..."
 
-          # Call vault-sync service (port 3005, public IP, authenticated via webhook secret)
-          RESPONSE=$(curl -s -w "\nHTTP %{http_code}" --connect-timeout 10 -X POST \
-            "http://${{ vars.PUBLIC_HOST }}:3005/vault-sync" \
+          # Use WEBHOOK_SECRET directly (already exported as individual env var)
+          curl -s --connect-timeout 10 -X POST \
+            "http://${{ vars.PUBLIC_HOST }}:${{ vars.VAULT_SYNC_PORT || '3005' }}/vault-sync" \
             -H "Content-Type: application/json" \
-            -H "x-webhook-secret: $(echo "$SECRETS" | jq -r '.WEBHOOK_SECRET')" \
-            -d "{\"job_id\": \"$JOB_ID\", \"commit_sha\": \"$LOG_SHA\"}")
-
-          echo "$RESPONSE"
+            -H "x-webhook-secret: $WEBHOOK_SECRET" \
+            -d "{\"job_id\": \"${{ steps.job.outputs.id }}\", \"commit_sha\": \"$LOG_SHA\"}"
