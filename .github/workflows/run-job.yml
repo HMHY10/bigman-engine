@@ -1,0 +1,118 @@
+name: Agent Job
+
+on:
+  create:
+
+jobs:
+  run-agent:
+    runs-on: ${{ vars.RUNS_ON || 'ubuntu-latest' }}
+    if: github.ref_type == 'branch' && startsWith(github.ref_name, 'job/')
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          sparse-checkout: |
+            package-lock.json
+            logs/*/job.config.json
+          sparse-checkout-cone-mode: false
+
+      - name: Get thepopebot version
+        id: version
+        run: |
+          VERSION=$(jq -r '.packages["node_modules/thepopebot"].version // "latest"' package-lock.json)
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Read job config overrides
+        id: job-config
+        run: |
+          JOB_ID="${{ github.ref_name }}"
+          JOB_ID="${JOB_ID#job/}"
+          CONFIG_FILE="logs/${JOB_ID}/job.config.json"
+          if [ -f "$CONFIG_FILE" ]; then
+            echo "llm_provider=$(jq -r '.llm_provider // empty' "$CONFIG_FILE")" >> $GITHUB_OUTPUT
+            echo "llm_model=$(jq -r '.llm_model // empty' "$CONFIG_FILE")" >> $GITHUB_OUTPUT
+            echo "agent_backend=$(jq -r '.agent_backend // empty' "$CONFIG_FILE")" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to GHCR
+        if: startsWith(vars.JOB_IMAGE_URL, 'ghcr.io/')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch secrets from Doppler
+        id: doppler
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          # Fetch all secrets from Doppler at runtime — no keys stored in GitHub
+          DOPPLER_SECRETS=$(curl -sf \
+            "https://api.doppler.com/v3/configs/config/secrets/download?project=bigman-engine&config=prd&format=json" \
+            -H "Authorization: Bearer $DOPPLER_TOKEN")
+
+          if [ -z "$DOPPLER_SECRETS" ]; then
+            echo "::error::Failed to fetch secrets from Doppler"
+            exit 1
+          fi
+
+          # Mask all secret values in GitHub Actions logs
+          echo "$DOPPLER_SECRETS" | jq -r 'to_entries[] | .value' | while read -r val; do
+            if [ -n "$val" ]; then
+              echo "::add-mask::$val"
+            fi
+          done
+
+          # Build SECRETS JSON (agent runtime secrets — keys the job container needs)
+          SECRETS=$(echo "$DOPPLER_SECRETS" | jq -c '{
+            ANTHROPIC_API_KEY: .ANTHROPIC_API_KEY,
+            BRAVE_API_KEY: .BRAVE_API_KEY,
+            GH_TOKEN: .GH_TOKEN,
+            OBSIDIAN_API_KEY: .OBSIDIAN_API_KEY,
+            OBSIDIAN_HOST: .OBSIDIAN_HOST,
+            WEBHOOK_SECRET: .WEBHOOK_SECRET
+          }')
+
+          # Export for next step
+          echo "SECRETS<<EOSECRETS" >> $GITHUB_ENV
+          echo "$SECRETS" >> $GITHUB_ENV
+          echo "EOSECRETS" >> $GITHUB_ENV
+
+      - name: Run thepopebot Agent
+        env:
+          JOB_IMAGE_URL: ${{ vars.JOB_IMAGE_URL }}
+          THEPOPEBOT_VERSION: ${{ steps.version.outputs.tag }}
+          LLM_MODEL: ${{ steps.job-config.outputs.llm_model || vars.LLM_MODEL }}
+          LLM_PROVIDER: ${{ steps.job-config.outputs.llm_provider || vars.LLM_PROVIDER }}
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          AGENT_BACKEND: ${{ steps.job-config.outputs.agent_backend || vars.AGENT_BACKEND || '' }}
+        run: |
+          AGENT_BACKEND="${AGENT_BACKEND:-pi}"
+          if [ -n "$JOB_IMAGE_URL" ]; then
+            IMAGE="${JOB_IMAGE_URL}:latest"
+          elif [ "$AGENT_BACKEND" = "claude-code" ]; then
+            IMAGE="stephengpope/thepopebot:claude-code-job-${THEPOPEBOT_VERSION}"
+          else
+            IMAGE="stephengpope/thepopebot:pi-coding-agent-job-${THEPOPEBOT_VERSION}"
+          fi
+          echo "Using image: $IMAGE"
+
+          # LLM_SECRETS empty — model config comes from GitHub vars
+          export LLM_SECRETS='{}'
+
+          docker run --rm \
+            -e REPO_URL="${{ github.server_url }}/${{ github.repository }}.git" \
+            -e BRANCH="${{ github.ref_name }}" \
+            -e SECRETS \
+            -e LLM_SECRETS \
+            -e LLM_MODEL="${LLM_MODEL}" \
+            -e LLM_PROVIDER="${LLM_PROVIDER}" \
+            -e OPENAI_BASE_URL="${OPENAI_BASE_URL}" \
+            -e AGENT_BACKEND="${AGENT_BACKEND}" \
+            "$IMAGE"
