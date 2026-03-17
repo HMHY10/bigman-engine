@@ -20,7 +20,7 @@ PIPELINE_DIR="/tmp/market-intel"
 LOCK_FILE="/tmp/market-intel.lock"
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-log() { echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"; }
+log() { echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*" >&2; }
 
 # --- Lockfile (prevent concurrent runs) ---
 exec 200>"$LOCK_FILE"

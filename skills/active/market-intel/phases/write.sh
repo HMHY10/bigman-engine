@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
 SYNC="$REPO_ROOT/skills/active/obsidian-sync/sync.sh"
 PIPELINE_DIR="/tmp/market-intel"
 
-log() { echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"; }
+log() { echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*" >&2; }
 
 MODE="${1:?Usage: write.sh <competitor|supplier|full>}"
 TODAY=$(date -u +"%Y-%m-%d")
