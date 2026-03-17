@@ -121,7 +121,10 @@ jobs:
           # LLM_SECRETS empty — model config comes from GitHub vars
           export LLM_SECRETS='{}'
 
+          # The stock entrypoint unsets ANTHROPIC_API_KEY (designed for OAuth).
+          # We use API key auth, so patch the entrypoint to keep it.
           docker run --rm \
+            --entrypoint /bin/bash \
             -e REPO_URL="${{ github.server_url }}/${{ github.repository }}.git" \
             -e BRANCH="${{ github.ref_name }}" \
             -e SECRETS \
@@ -134,4 +137,5 @@ jobs:
             -e BRAVE_API_KEY="${BRAVE_API_KEY}" \
             -e OBSIDIAN_API_KEY="${OBSIDIAN_API_KEY}" \
             -e OBSIDIAN_HOST="${OBSIDIAN_HOST}" \
-            "$IMAGE"
+            "$IMAGE" \
+            -c 'sed -i "/unset ANTHROPIC_API_KEY/d" /entrypoint.sh && exec /entrypoint.sh'
