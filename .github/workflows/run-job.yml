@@ -138,4 +138,4 @@ jobs:
             -e OBSIDIAN_API_KEY="${OBSIDIAN_API_KEY}" \
             -e OBSIDIAN_HOST="${OBSIDIAN_HOST}" \
             "$IMAGE" \
-            -c 'sed -i "/unset ANTHROPIC_API_KEY/d" /entrypoint.sh && exec /entrypoint.sh'
+            -c 'cp /entrypoint.sh /tmp/entrypoint.sh && sed -i "/unset ANTHROPIC_API_KEY/d" /tmp/entrypoint.sh && exec /tmp/entrypoint.sh'
