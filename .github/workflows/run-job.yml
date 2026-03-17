@@ -87,10 +87,17 @@ jobs:
             WEBHOOK_SECRET: .WEBHOOK_SECRET
           }')
 
-          # Export for next step
+          # Export SECRETS JSON for container
           echo "SECRETS<<EOSECRETS" >> $GITHUB_ENV
           echo "$SECRETS" >> $GITHUB_ENV
           echo "EOSECRETS" >> $GITHUB_ENV
+
+          # Also export individual secrets as env vars (Claude Code needs ANTHROPIC_API_KEY directly)
+          echo "$DOPPLER_SECRETS" | jq -r 'to_entries[] | select(.key | test("DOPPLER_") | not) | "\(.key)=\(.value)"' | while IFS='=' read -r key val; do
+            echo "$key<<EOF_$key" >> $GITHUB_ENV
+            echo "$val" >> $GITHUB_ENV
+            echo "EOF_$key" >> $GITHUB_ENV
+          done
 
       - name: Run thepopebot Agent
         env:
@@ -123,4 +130,8 @@ jobs:
             -e LLM_PROVIDER="${LLM_PROVIDER}" \
             -e OPENAI_BASE_URL="${OPENAI_BASE_URL}" \
             -e AGENT_BACKEND="${AGENT_BACKEND}" \
+            -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+            -e BRAVE_API_KEY="${BRAVE_API_KEY}" \
+            -e OBSIDIAN_API_KEY="${OBSIDIAN_API_KEY}" \
+            -e OBSIDIAN_HOST="${OBSIDIAN_HOST}" \
             "$IMAGE"
