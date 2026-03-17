@@ -139,3 +139,31 @@ jobs:
             -e OBSIDIAN_HOST="${OBSIDIAN_HOST}" \
             "$IMAGE" \
             -c 'cp /entrypoint.sh /tmp/entrypoint.sh && sed -i "/unset ANTHROPIC_API_KEY/d" /tmp/entrypoint.sh && exec /tmp/entrypoint.sh'
+
+      - name: Sync outputs to Obsidian vault
+        if: always()
+        run: |
+          JOB_ID="${{ github.ref_name }}"
+          JOB_ID="${JOB_ID#job/}"
+
+          # Find the commit with job outputs (before the cleanup commit)
+          LOG_SHA=$(curl -sf \
+            "https://api.github.com/repos/${{ github.repository }}/commits?sha=${{ github.ref_name }}&per_page=3" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" | \
+            jq -r '[.[] | select(.commit.message | test("Agent Job"))] | .[0].sha // empty')
+
+          if [ -z "$LOG_SHA" ]; then
+            echo "No job output commit found, skipping vault sync"
+            exit 0
+          fi
+
+          echo "Syncing job $JOB_ID outputs from commit $LOG_SHA to Obsidian vault..."
+
+          # Call vault-sync service (port 3005, public IP, authenticated via webhook secret)
+          RESPONSE=$(curl -s -w "\nHTTP %{http_code}" --connect-timeout 10 -X POST \
+            "http://${{ vars.PUBLIC_HOST }}:3005/vault-sync" \
+            -H "Content-Type: application/json" \
+            -H "x-webhook-secret: $(echo "$SECRETS" | jq -r '.WEBHOOK_SECRET')" \
+            -d "{\"job_id\": \"$JOB_ID\", \"commit_sha\": \"$LOG_SHA\"}")
+
+          echo "$RESPONSE"

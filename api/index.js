@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'crypto';
 import { createJob } from '../lib/tools/create-job.js';
 import { setWebhook } from '../lib/tools/telegram.js';
-import { getJobStatus, fetchJobLog } from '../lib/tools/github.js';
+import { githubApi, getJobStatus, fetchJobLog } from '../lib/tools/github.js';
 import { getTelegramAdapter } from '../lib/channels/index.js';
 import { chat, summarizeJob } from '../lib/ai/index.js';
 import { createNotification } from '../lib/db/notifications.js';
@@ -31,7 +31,7 @@ function getFireTriggers() {
 }
 
 // Routes that have their own authentication
-const PUBLIC_ROUTES = ['/telegram/webhook', '/github/webhook', '/ping'];
+const PUBLIC_ROUTES = ['/telegram/webhook', '/github/webhook', '/vault-sync', '/ping'];
 
 /**
  * Timing-safe string comparison.
@@ -201,6 +201,86 @@ async function handleGithubWebhook(request) {
   }
 }
 
+// System files in job logs — NOT synced to vault
+const VAULT_SKIP_FILES = new Set([
+  'claude-session.jsonl', 'claude-stderr.log', 'system-prompt.md', 'job.config.json',
+]);
+
+/**
+ * Sync job output files from GitHub to Obsidian vault.
+ * Reads .md outputs from the job log directory and writes to vault via REST API.
+ * Vault path: checks for `vault-path:` in YAML frontmatter, else `05-Agent-Outputs/{filename}`.
+ */
+async function handleVaultSync(request) {
+  // Auth: validate WEBHOOK_SECRET (same pattern as GitHub webhook)
+  const WEBHOOK_SECRET = getConfig('WEBHOOK_SECRET');
+  if (!WEBHOOK_SECRET || !safeCompare(request.headers.get('x-webhook-secret'), WEBHOOK_SECRET)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { job_id, commit_sha } = body;
+
+  if (!job_id || !commit_sha) {
+    return Response.json({ error: 'Missing job_id or commit_sha' }, { status: 400 });
+  }
+
+  const { GH_OWNER, GH_REPO } = process.env;
+  const OBSIDIAN_HOST = getConfig('OBSIDIAN_HOST');
+  const OBSIDIAN_API_KEY = getConfig('OBSIDIAN_API_KEY');
+
+  if (!OBSIDIAN_HOST || !OBSIDIAN_API_KEY) {
+    return Response.json({ error: 'Obsidian not configured' }, { status: 500 });
+  }
+
+  try {
+    const files = await githubApi(
+      `/repos/${GH_OWNER}/${GH_REPO}/contents/logs/${job_id}?ref=${encodeURIComponent(commit_sha)}`
+    );
+
+    if (!Array.isArray(files)) {
+      return Response.json({ ok: true, synced: 0, reason: 'no log directory' });
+    }
+
+    const outputFiles = files.filter(f => f.name.endsWith('.md') && !VAULT_SKIP_FILES.has(f.name));
+    if (outputFiles.length === 0) {
+      return Response.json({ ok: true, synced: 0, reason: 'no output files' });
+    }
+
+    const synced = [];
+    for (const file of outputFiles) {
+      const fileData = await githubApi(
+        `/repos/${GH_OWNER}/${GH_REPO}/contents/logs/${job_id}/${file.name}?ref=${encodeURIComponent(commit_sha)}`
+      );
+      const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+
+      // Check frontmatter for explicit vault path
+      let vaultPath = `05-Agent-Outputs/${file.name}`;
+      const match = content.match(/^---\n[\s\S]*?vault-path:\s*(.+)\n[\s\S]*?---/);
+      if (match) vaultPath = match[1].trim();
+
+      const res = await fetch(`${OBSIDIAN_HOST}/vault/${vaultPath}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${OBSIDIAN_API_KEY}`, 'Content-Type': 'text/markdown' },
+        body: content,
+      });
+
+      if (res.ok || res.status === 204) {
+        synced.push({ file: file.name, vault_path: vaultPath });
+        console.log(`[vault-sync] ${file.name} → ${vaultPath}`);
+      } else {
+        console.error(`[vault-sync] Failed: ${vaultPath} HTTP ${res.status}`);
+      }
+    }
+
+    console.log(`[vault-sync] Job ${job_id.slice(0, 8)}: ${synced.length}/${outputFiles.length} files`);
+    return Response.json({ ok: true, synced: synced.length, files: synced });
+  } catch (err) {
+    console.error('[vault-sync] Error:', err.message);
+    return Response.json({ error: 'Vault sync failed' }, { status: 500 });
+  }
+}
+
 async function handleJobStatus(request) {
   try {
     const url = new URL(request.url);
@@ -248,6 +328,7 @@ async function POST(request) {
   // Route to handler
   switch (routePath) {
     case '/create-job':          return handleWebhook(request);
+    case '/vault-sync':          return handleVaultSync(request);
     case '/telegram/webhook':   return handleTelegramWebhook(request);
     case '/telegram/register':  return handleTelegramRegister(request);
     case '/github/webhook':     return handleGithubWebhook(request);
