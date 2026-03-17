@@ -369,8 +369,8 @@ process_email() {
   flag_reason=$(echo "$classification" | jq -r '.flag_reason // ""')
 
   local priority="normal"
-  if [ "$flag" = "true" ]; then priority="high"; fi
   if [ "$category" = "marketing" ]; then priority="low"; fi
+  if [ "$flag" = "true" ]; then priority="high"; fi
 
   # Save raw email
   local raw_filename

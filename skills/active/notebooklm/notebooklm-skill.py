@@ -205,7 +205,8 @@ async def main():
 
         # Write vault index note
         source_links = "\n".join(f"- [[{s['path']}]]" for s in sources)
-        format_title = args.format.replace("mindmap", "Mind Map").replace("flashcards", "Flashcards").title()
+        format_titles = {"audio": "Audio Overview", "slides": "Slide Deck", "quiz": "Quiz", "flashcards": "Flashcards", "mindmap": "Mind Map", "infographic": "Infographic"}
+        format_title = format_titles[args.format]
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         index_content = f"""---
