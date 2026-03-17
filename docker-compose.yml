@@ -4,13 +4,26 @@ services:
     image: ${EVENT_HANDLER_IMAGE_URL:-stephengpope/thepopebot:event-handler-${THEPOPEBOT_VERSION:-1.2.74-beta.30}}
     ports:
       - "3004:80"
-    env_file:
-      - .env
+    environment:
+      - AGENT_LLM_MODEL=${AGENT_LLM_MODEL}
+      - AGENT_LLM_PROVIDER=${AGENT_LLM_PROVIDER}
+      - AGENT_TYPE=${AGENT_TYPE}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - APP_HOSTNAME=${APP_HOSTNAME}
+      - APP_PORT=${APP_PORT}
+      - APP_URL=${APP_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - GH_OWNER=${GH_OWNER}
+      - GH_REPO=${GH_REPO}
+      - GH_TOKEN=${GH_TOKEN}
+      - OBSIDIAN_API_KEY=${OBSIDIAN_API_KEY}
+      - OBSIDIAN_HOST=${OBSIDIAN_HOST}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
     volumes:
       - .:/project
       - ./config:/app/config
       - ./skills:/app/skills
-      - ./.env:/app/.env
       - ./data:/app/data
       - ./logs:/app/logs
       - ./cron:/app/cron
