@@ -175,7 +175,7 @@ async def main():
         # Add sources
         for src in sources:
             name = pathlib.Path(src["path"]).stem
-            await run_with_retry(client.sources.add_text, nb.id, src["content"])
+            await run_with_retry(client.sources.add_text, nb.id, name, src["content"])
             log(f"Added source: {name} ({len(src['content']) / 1024:.1f}KB text)")
             await asyncio.sleep(API_DELAY)
 
@@ -184,10 +184,7 @@ async def main():
         log(f"Generating {args.format}... (polling, timeout {GENERATION_TIMEOUT // 60}m)")
 
         status = await run_with_retry(generate_method, nb.id)
-        await asyncio.wait_for(
-            client.artifacts.wait_for_completion(nb.id, status.task_id),
-            timeout=GENERATION_TIMEOUT
-        )
+        await client.artifacts.wait_for_completion(nb.id, status.task_id, timeout=GENERATION_TIMEOUT)
 
         gen_duration = time.time() - start_time
         log(f"Generation complete ({format_duration(gen_duration)})")
