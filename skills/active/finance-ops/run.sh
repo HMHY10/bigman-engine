@@ -4,8 +4,8 @@ set -euo pipefail
 # finance-ops/run.sh — Financial intelligence for marketplace operations
 # Runs as: doppler run -p shared-services -c prd -- ./run.sh
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-LIB_DIR="/opt/bigman-engine/skills/active/marketplace-lib"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$(cd "$SCRIPT_DIR/../marketplace-lib" && pwd)"
 
 # Source shared libraries
 source "${LIB_DIR}/config.sh"
@@ -250,9 +250,6 @@ log "Courier claims detection complete: ${COURIER_ALERT_COUNT} alerts raised"
 log "Generating daily P&L..."
 DATE_STR=$(date '+%Y-%m-%d')
 
-# Get order sources for marketplace names
-SOURCES=$(bl_get_order_sources 2>/dev/null || printf '%s' "{}")
-
 # Calculate refund totals from returns
 TOTAL_REFUND_VALUE=$(printf '%s' "$RETURNS" | jq '[.[].products // [] | .[].price // 0 | tonumber] | add // 0')
 
@@ -305,17 +302,7 @@ ${PNL_BODY}
 
 # Write P&L to vault
 PNL_PATH="07-Marketplace/Finance/Reports/${DATE_STR}-daily-pnl.md"
-http_code=$(curl -sS -o /dev/null -w '%{http_code}' \
-  -X PUT "${VAULT_URL}/vault/${PNL_PATH}" \
-  -H "Authorization: Bearer ${OBSIDIAN_API_KEY}" \
-  -H "Content-Type: text/markdown" \
-  -d "$PNL_CONTENT")
-
-if [[ "$http_code" == "204" || "$http_code" == "200" ]]; then
-  log "Daily P&L written to vault: ${PNL_PATH}"
-else
-  log "Daily P&L write failed: HTTP ${http_code}"
-fi
+vault_write "$PNL_PATH" "$PNL_CONTENT" || log "Daily P&L write failed"
 
 # ── 2e: Stale Claims Check ─────────────────────────────────────────
 # Read existing open claims from vault 07-Marketplace/Finance/Claims/.
@@ -373,16 +360,10 @@ last_escalated: ${TODAY}")
             UPDATED_CONTENT=$(printf '%s' "$UPDATED_CONTENT" | sed 's/^severity: high$/severity: critical/')
 
             # Write updated content back to vault
-            esc_http=$(curl -sS -o /dev/null -w '%{http_code}' \
-              -X PUT "${VAULT_URL}/vault/07-Marketplace/Finance/Claims/${claim_file}" \
-              -H "Authorization: Bearer ${OBSIDIAN_API_KEY}" \
-              -H "Content-Type: text/markdown" \
-              -d "$UPDATED_CONTENT")
-
-            if [[ "$esc_http" == "204" || "$esc_http" == "200" ]]; then
+            if vault_write "07-Marketplace/Finance/Claims/${claim_file}" "$UPDATED_CONTENT"; then
               log "Stale claim escalated: ${claim_file}"
             else
-              log "Stale claim escalation failed: ${claim_file} — HTTP ${esc_http}"
+              log "Stale claim escalation failed: ${claim_file}"
             fi
 
             STALE_CLAIM_COUNT=$((STALE_CLAIM_COUNT + 1))

@@ -65,6 +65,19 @@ run_orders() {
   local now_epoch
   now_epoch=$(date +%s)
 
+  _check_sla() {
+    local label="$1" ms="$2"
+    [[ -z "$ms" || "$ms" == "null" ]] && return
+    local epoch=$(( ms / 1000 ))
+    (( epoch == 0 )) && return
+    local age_hours=$(( (now_epoch - epoch) / 3600 ))
+    if (( age_hours >= 36 )); then
+      sla_critical_alerts="${sla_critical_alerts}\n- Order ${display_id}: ${label} ${age_hours}h ago (SLA BREACH)"
+    elif (( age_hours >= 24 )); then
+      sla_high_alerts="${sla_high_alerts}\n- Order ${display_id}: ${label} ${age_hours}h ago (approaching SLA)"
+    fi
+  }
+
   # Process each order using process substitution
   while IFS= read -r order; do
     [[ -z "$order" || "$order" == "null" ]] && continue
@@ -80,41 +93,8 @@ run_orders() {
 
     case "$status" in
       CHECKOUT)    count_checkout=$((count_checkout + 1)) ;;
-      PAID)        count_paid=$((count_paid + 1))
-        # PAID orders need fulfilment — check SLA
-        if [[ -n "$created_at_ms" && "$created_at_ms" != "null" ]]; then
-          local created_epoch age_hours
-          # createdAt is millisecond epoch — convert to seconds
-          created_epoch=$(( created_at_ms / 1000 ))
-
-          if (( created_epoch > 0 )); then
-            age_hours=$(( (now_epoch - created_epoch) / 3600 ))
-
-            if (( age_hours >= 36 )); then
-              sla_critical_alerts="${sla_critical_alerts}\n- Order ${display_id}: paid ${age_hours}h ago (SLA BREACH)"
-            elif (( age_hours >= 24 )); then
-              sla_high_alerts="${sla_high_alerts}\n- Order ${display_id}: paid ${age_hours}h ago (approaching SLA)"
-            fi
-          fi
-        fi
-        ;;
-      FINANCED)    count_financed=$((count_financed + 1))
-        # FINANCED orders also need fulfilment — check SLA
-        if [[ -n "$created_at_ms" && "$created_at_ms" != "null" ]]; then
-          local created_epoch age_hours
-          created_epoch=$(( created_at_ms / 1000 ))
-
-          if (( created_epoch > 0 )); then
-            age_hours=$(( (now_epoch - created_epoch) / 3600 ))
-
-            if (( age_hours >= 36 )); then
-              sla_critical_alerts="${sla_critical_alerts}\n- Order ${display_id}: financed ${age_hours}h ago (SLA BREACH)"
-            elif (( age_hours >= 24 )); then
-              sla_high_alerts="${sla_high_alerts}\n- Order ${display_id}: financed ${age_hours}h ago (approaching SLA)"
-            fi
-          fi
-        fi
-        ;;
+      PAID)        count_paid=$((count_paid + 1)); _check_sla "paid" "$created_at_ms" ;;
+      FINANCED)    count_financed=$((count_financed + 1)); _check_sla "financed" "$created_at_ms" ;;
       EXPIRED)     count_expired=$((count_expired + 1)) ;;
       SHIPPED)     count_shipped=$((count_shipped + 1)) ;;
       DELIVERED)   count_delivered=$((count_delivered + 1)) ;;
@@ -197,18 +177,7 @@ $(if [[ -n "$sla_high_alerts" ]]; then
 PERFEOF
 )
 
-  local http_code
-  http_code=$(curl -sS -o /dev/null -w '%{http_code}' \
-    -X PUT "${VAULT_URL}/vault/${vault_path}" \
-    -H "Authorization: Bearer ${OBSIDIAN_API_KEY}" \
-    -H "Content-Type: text/markdown" \
-    -d "$summary_content")
-
-  if [[ "$http_code" == "204" || "$http_code" == "200" ]]; then
-    log "qogita-seller: performance summary written to ${vault_path}"
-  else
-    log "qogita-seller: vault write failed — HTTP ${http_code}"
-  fi
+  vault_write "$vault_path" "$summary_content" || log "qogita-seller: vault write failed"
 
   log "qogita-seller: orders mode complete (total=${total_orders} paid=${count_paid} financed=${count_financed} shipped=${count_shipped} actionable=${actionable})"
 }

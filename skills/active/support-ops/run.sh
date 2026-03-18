@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── Source shared libs ───────────────────────────────────────────────
-LIB="/opt/bigman-engine/skills/active/marketplace-lib"
+LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../marketplace-lib" && pwd)"
 source "${LIB}/config.sh"
 source "${LIB}/cache.sh"
 source "${LIB}/baselinker.sh"
@@ -90,7 +90,7 @@ order_id: ${order_id}
       "Stale Return ${return_id}" \
       "$alert_body" && ALERT_COUNT=$((ALERT_COUNT + 1))
   fi
-done < <(printf '%s' "$RETURNS_JSON" | jq -r '.[] | "\(.return_id) \(.order_id) \(.date) \(.status // "unknown")"')
+done < <(printf '%s' "$RETURNS_JSON" | jq -r '.[] | "\(.return_id) \(.order_id) \(.date // 0) \(.status // "unknown")"')
 
 log "${SKILL}: 2a complete — ${ALERT_COUNT} stale return alerts"
 

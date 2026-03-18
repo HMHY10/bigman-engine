@@ -26,7 +26,7 @@ cd /opt/bigman-engine && doppler run -p shared-services -c prd -- ./skills/activ
 ## Metrics Tracked
 
 ### Defect Rate (per marketplace)
-- Orders with `status_id < 0` are counted as defects (cancellations/failures)
+- Orders with `order_status_id` matching `COMPLIANCE_DEFECT_STATUSES` (Cancelled=121669, Label Error=127043, Other Issues=127045) are counted as defects
 - **Warning threshold:** `COMPLIANCE_WARN_PERCENT` (80% of 2.5% = 2.0% defect rate)
 - **Critical threshold:** `COMPLIANCE_CRITICAL_PERCENT` (90% of 2.5% = 2.25% defect rate)
 
