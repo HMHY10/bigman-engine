@@ -32,26 +32,40 @@ run_orders() {
   fi
   log "qogita-seller: auth success"
 
-  # ── 2. Fetch seller orders ─────────────────────────────────────────
-  local orders_json
-  orders_json=$(qogita_request "seller" "GET" "/seller/orders/?page=1&size=50") || {
-    log "qogita-seller: /seller/orders/ failed, trying /orders/"
-    orders_json=$(qogita_request "seller" "GET" "/orders/?page=1&size=50") || {
-      log "qogita-seller: order fetch failed on all endpoints"
-      log "qogita-seller: response was: ${orders_json:-empty}"
-      return 1
-    }
-  }
+  # ── 2. Fetch seller orders (paginated) ────────────────────────────
+  local all_results="[]"
+  local page=1 max_pages=20 endpoint="/orders/"
 
-  log "qogita-seller: orders response received ($(printf '%s' "$orders_json" | wc -c | tr -d ' ') bytes)"
+  while (( page <= max_pages )); do
+    local page_json
+    page_json=$(qogita_request "seller" "GET" "${endpoint}?page=${page}&size=50") || {
+      if (( page == 1 )); then
+        log "qogita-seller: order fetch failed"
+        return 1
+      fi
+      break
+    }
+
+    local page_results page_next
+    page_results=$(printf '%s' "$page_json" | jq -c '.results // []')
+    page_next=$(printf '%s' "$page_json" | jq -r '.next // empty')
+
+    all_results=$(printf '%s\n%s' "$all_results" "$page_results" | jq -s 'add')
+    log "qogita-seller: page ${page} — $(printf '%s' "$page_results" | jq 'length') orders"
+
+    # Stop if no next page
+    [[ -z "$page_next" ]] && break
+    page=$((page + 1))
+  done
+
+  log "qogita-seller: fetched $(printf '%s' "$all_results" | jq 'length') total orders"
 
   # ── 3. Cache the orders ────────────────────────────────────────────
-  cache_write "qogita-seller" "orders" "$orders_json"
+  cache_write "qogita-seller" "orders" "$all_results"
 
   # ── 4. Parse orders and check SLA deadlines ────────────────────────
-  # Extract results array (Qogita paginates with .results or top-level array)
   local results
-  results=$(printf '%s' "$orders_json" | jq -c '.results // . // []')
+  results="$all_results"
 
   local total_orders
   total_orders=$(printf '%s' "$results" | jq 'if type == "array" then length else 0 end')
@@ -98,7 +112,7 @@ run_orders() {
       EXPIRED)     count_expired=$((count_expired + 1)) ;;
       SHIPPED)     count_shipped=$((count_shipped + 1)) ;;
       DELIVERED)   count_delivered=$((count_delivered + 1)) ;;
-      CANCELLED)   count_cancelled=$((count_cancelled + 1)) ;;
+      CANCELLED|DECLINED) count_cancelled=$((count_cancelled + 1)) ;;
       *)
         count_other=$((count_other + 1))
         log "qogita-seller: unknown status '${status}' for order ${display_id}"
