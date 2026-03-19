@@ -28,6 +28,9 @@ from models import Opportunity, Product, Recommendation
 from vault import log, vault_write
 import queue_manager
 from stages import amazon_match, compliance, market_analysis, margin_calc, volume_estimate, scoring
+from stages.image_verify import run as image_verify_run
+from stages.margin_calc import adjust_for_pack_size as adjust_margin_pack
+from stages.volume_estimate import adjust_for_pack_size as adjust_volume_pack
 
 LOCK_FILE = "/tmp/opportunity-analyser.lock"
 
@@ -64,6 +67,20 @@ def analyse_product(product: Product) -> Recommendation:
 
     # Stage 6: Scoring
     rec = scoring.run(product, best_match, comp, market, margin, vol)
+
+    # Stage 7: Image & listing verification (Buy/Review only)
+    rec = image_verify_run(product, best_match, rec)
+
+    # Pack size recalculation (if detected)
+    if rec and rec.pack_size > 1:
+        saved_pack_size = rec.pack_size
+        saved_flags = rec.image_flags
+        margin = adjust_margin_pack(margin, rec.pack_size)
+        vol = adjust_volume_pack(vol, rec.pack_size)
+        # Re-score with adjusted margins
+        rec = scoring.run(product, best_match, comp, market, margin, vol)
+        rec.pack_size = saved_pack_size
+        rec.image_flags = saved_flags
 
     # Store raw predictors for algo training
     rec.raw_predictors = _collect_predictors(product, best_match, comp, market, margin, vol)
@@ -281,6 +298,15 @@ def process_queue(dry_run: bool = False):
                     write_recommendation(rec, opp.id)
                     save_predictors(rec)
                     queue_manager.record_processed(opp.source, product.ean, product.buy_price)
+                    # Post-analysis: price alert evaluation
+                    try:
+                        from alerts.qogita_alerts import evaluate_for_alert
+                        if rec and rec.classification in ('review', 'skip'):
+                            evaluate_for_alert(product, rec, rec.margin, rec.market, rec.volume)
+                    except ImportError:
+                        pass  # alerts module not yet deployed
+                    except Exception as e:
+                        log(f'alert evaluation failed: {e}')
                 else:
                     log(f"dry-run: {product.ean} → {rec.classification} (score={rec.score})")
 
