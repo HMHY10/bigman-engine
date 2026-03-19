@@ -53,3 +53,20 @@ def run(product: Product, match: AmazonMatch, market: MarketData) -> VolumeResul
 
     log(f"stage5: {match.asin} — daily_demand={daily_demand:.1f}, base={base_qty}, recommended={best_qty} ({result.fallback_used})")
     return result
+
+
+def adjust_for_pack_size(volume_result, pack_size):
+    """Adjust volume estimate when marketplace listing is a multipack.
+
+    If listing sells as packs of N, actual unit demand = pack_demand * N,
+    but recommended purchase qty should be in supplier units (not packs).
+    """
+    if not volume_result or pack_size <= 1:
+        return volume_result
+
+    # Market demand is in packs — convert to units
+    volume_result.recommended_qty = volume_result.recommended_qty * pack_size
+    volume_result.reasoning += f" (adjusted for {pack_size}-pack: {volume_result.recommended_qty} units)"
+    log(f"pack size {pack_size}: adjusted qty to {volume_result.recommended_qty} units")
+
+    return volume_result

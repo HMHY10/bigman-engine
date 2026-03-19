@@ -183,3 +183,31 @@ def calculate_at_volume(product: Product, match: AmazonMatch, market: MarketData
         result = run(temp_product, match, market)
         results.append((vp.qty, result))
     return results
+
+
+def adjust_for_pack_size(margin_result, pack_size):
+    """Recalculate margin per-unit when product is a multipack.
+
+    pack_size: number of individual units in the listing.
+    Adjusts sell_price, profit, ROI to reflect per-unit economics.
+    """
+    if not margin_result or pack_size <= 1:
+        return margin_result
+
+    # The sell_price on marketplace is for the pack
+    # But buy_price is per-unit from supplier
+    # So we need: unit_sell_price = pack_sell_price / pack_size
+    # And compare that to buy_price per unit
+    total_fees = margin_result.referral_fee + margin_result.fba_fee + margin_result.shipping_fba
+    unit_sell = margin_result.sell_price / pack_size
+    unit_profit = unit_sell - margin_result.buy_price - (total_fees / pack_size)
+    unit_roi = (unit_profit / margin_result.buy_price * 100) if margin_result.buy_price > 0 else 0
+
+    log(f"pack size {pack_size}: pack sell £{margin_result.sell_price:.2f} → unit sell £{unit_sell:.2f}, unit profit £{unit_profit:.2f}")
+
+    # Update the margin result with per-unit figures
+    margin_result.sell_price = round(unit_sell, 2)
+    margin_result.profit_per_unit = round(unit_profit, 2)
+    margin_result.roi_pct = round(unit_roi, 1)
+
+    return margin_result
