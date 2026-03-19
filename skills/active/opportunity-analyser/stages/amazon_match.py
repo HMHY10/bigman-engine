@@ -1,4 +1,5 @@
 """Stage 1: Match product EAN to Amazon ASIN(s). Discover variations, apply brand rules."""
+import re
 from thefuzz import fuzz
 
 from clients import sp_api
@@ -60,6 +61,18 @@ def run(product: Product) -> list[AmazonMatch]:
         ))
 
     matches.sort(key=lambda m: m.confidence, reverse=True)
+
+    # Enrich best match with image URL and alternate ASINs
+    if matches:
+        best = matches[0]
+        # Get image from the primary match's SP-API data
+        for item in items:
+            if item.get("asin") == best.asin:
+                from clients.sp_api import extract_image_url
+                best.image_url = extract_image_url(item)
+                break
+        # Find alternate ASINs
+        best.alternate_asins = find_alternate_asins(product, best, sp_api)
     log(f"stage1: {product.ean} → {len(matches)} matches (best confidence: {matches[0].confidence:.2f})" if matches else f"stage1: {product.ean} → no matches")
     return matches
 
@@ -83,3 +96,52 @@ def _score_confidence(product: Product, asin: str, title: str, brand: str, ean_m
         score += 0.1
 
     return min(score, 1.0)
+
+
+def find_alternate_asins(product, primary_match, sp_client):
+    """Search by title+brand to find alternate ASINs (bundles, multipacks, wrong-EAN listings)."""
+    if not primary_match:
+        return []
+
+    try:
+        keywords = f"{product.brand} {product.name}"
+        results = sp_client.search_by_keywords(keywords)
+        alternates = []
+
+        for item in results:
+            asin = item.get("asin")
+            if asin == primary_match.asin:
+                continue  # Skip the primary match
+
+            title = item.get("summaries", [{}])[0].get("itemName", "") if item.get("summaries") else ""
+            title_lower = title.lower()
+
+            # Detect pack/bundle
+            pack_size = 1
+            is_bundle = False
+            pack_match = re.search(r'(?:pack\s*(?:of\s*)?|x\s*|×\s*)(\d+)', title_lower)
+            if pack_match:
+                pack_size = int(pack_match.group(1))
+                is_bundle = True
+            elif any(kw in title_lower for kw in ["multipack", "bundle", "twin pack", "duo pack"]):
+                is_bundle = True
+                pack_size = 2  # Default for generic bundle terms
+
+            # Only include if reasonably related
+            similarity = fuzz.token_sort_ratio(product.name.lower(), title_lower)
+            if similarity >= 50:
+                from clients.sp_api import extract_image_url
+                alternates.append({
+                    "asin": asin,
+                    "title": title,
+                    "is_bundle": is_bundle,
+                    "pack_size": pack_size,
+                    "similarity": similarity,
+                    "image_url": extract_image_url(item),
+                })
+
+        return sorted(alternates, key=lambda x: x["similarity"], reverse=True)[:5]
+
+    except Exception as e:
+        log(f"alternate ASIN search failed: {e}")
+        return []

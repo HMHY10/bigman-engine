@@ -87,7 +87,7 @@ def search_by_ean(ean: str) -> list[dict]:
             identifiers=ean,
             identifiersType="EAN",
             marketplaceIds=MARKETPLACE_ID,
-            includedData="identifiers,summaries,relationships",
+            includedData="identifiers,summaries,relationships,images",
         )
         _increment_count()
         items = response.payload.get("items", [])
@@ -170,3 +170,18 @@ def search_by_keywords(keywords: str, brand: str = "") -> list[dict]:
         log(f"sp_api: keyword search failed: {e}")
         _increment_count()
         return []
+
+
+def extract_image_url(item):
+    """Extract primary image URL from SP-API item response."""
+    images = item.get("images", [])
+    if images:
+        for img_set in images:
+            imgs = img_set.get("images", [])
+            if imgs:
+                # Prefer MAIN variant
+                main = [i for i in imgs if i.get("variant") == "MAIN"]
+                if main:
+                    return main[0].get("link")
+                return imgs[0].get("link")
+    return None
