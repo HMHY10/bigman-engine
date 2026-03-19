@@ -24,8 +24,51 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import QUEUE_PROCESSED, QUEUE_PENDING, QUEUE_PROCESSING, DATA_ROOT
 from clients import qogita
 from vault import log, vault_write
+import config
 
 APPROVALS_DIR = f"{DATA_ROOT}/approvals"
+
+
+
+# ── Approved Products Tracking ────────────────────────
+APPROVED_FILE = os.path.join(config.INTEL_ROOT, 'price-alerts', 'approved-products.json')
+
+
+def load_approved_products():
+    """Load list of previously approved products."""
+    if os.path.exists(APPROVED_FILE):
+        with open(APPROVED_FILE) as f:
+            return json.load(f)
+    return []
+
+
+def record_approval(ean, product_name, qty, supplier):
+    """Record a product approval for future auto-execution."""
+    approved = load_approved_products()
+    for entry in approved:
+        if entry['ean'] == ean:
+            entry['max_approved_quantity'] = max(entry.get('max_approved_quantity', 0), qty)
+            entry['last_approved_date'] = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            entry['approved_supplier'] = supplier
+            with open(APPROVED_FILE, 'w') as f:
+                json.dump(approved, f, indent=2)
+            return
+    approved.append({
+        'ean': ean,
+        'product_name': product_name,
+        'max_approved_quantity': qty,
+        'last_approved_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+        'approved_supplier': supplier,
+    })
+    os.makedirs(os.path.dirname(APPROVED_FILE), exist_ok=True)
+    with open(APPROVED_FILE, 'w') as f:
+        json.dump(approved, f, indent=2)
+
+
+def has_prior_approval(ean):
+    """Check if a product has been previously approved."""
+    approved = load_approved_products()
+    return any(entry['ean'] == ean for entry in approved)
 
 
 def find_recommendation(opportunity_id: str) -> dict | None:
