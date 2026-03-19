@@ -10,13 +10,14 @@ Outputs enrichment JSON to data/product-intel/competitor/ keyed by EAN.
 Cron: daily at 7am.
 """
 import json
-import os
 import subprocess
-import sys
 from datetime import datetime
 
 import anthropic
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
 SKILL = "opportunity-analyser"

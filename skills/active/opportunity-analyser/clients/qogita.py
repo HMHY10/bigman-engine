@@ -107,7 +107,12 @@ def list_offers(page: int = 1, size: int = 100) -> dict:
         if resp.status_code != 200:
             log(f"qogita: offers failed HTTP {resp.status_code}")
             return {"results": [], "count": 0}
-        return resp.json()
+        data = resp.json()
+        # Extract image URLs from offers
+        for offer in data.get('results', []):
+            image_url = offer.get('variant', {}).get('image', {}).get('url') or offer.get('image', '')
+            offer['image_url'] = image_url
+        return data
     except Exception as e:
         log(f"qogita: offers error: {e}")
         return {"results": [], "count": 0}
