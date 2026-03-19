@@ -104,6 +104,7 @@ def handle_price_alert(alert_data):
             return
 
     # Queue for re-analysis with new price
+    auto_exec = has_prior_approval(ean)
     from queue_manager import enqueue
     enqueue({
         'product': {'ean': ean, 'name': alert_data.get('product_name', ''),
@@ -111,9 +112,9 @@ def handle_price_alert(alert_data):
         'source': 'price-alert',
         'supplier': 'Qogita',
         'priority': True,
-        'auto_execute': has_prior_approval(ean),
+        'auto_execute': auto_exec,
     })
-    log(f'price alert queued: {ean} at £{new_price:.2f} (auto_execute={has_prior_approval(ean)})')
+    log(f'price alert queued: {ean} at £{new_price:.2f} (auto_execute={auto_exec})')
 
     # Remove from active alerts
     if tracked:

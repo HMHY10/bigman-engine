@@ -116,16 +116,10 @@ def find_alternate_asins(product, primary_match, sp_client):
             title = item.get("summaries", [{}])[0].get("itemName", "") if item.get("summaries") else ""
             title_lower = title.lower()
 
-            # Detect pack/bundle
-            pack_size = 1
-            is_bundle = False
-            pack_match = re.search(r'(?:pack\s*(?:of\s*)?|x\s*|×\s*)(\d+)', title_lower)
-            if pack_match:
-                pack_size = int(pack_match.group(1))
-                is_bundle = True
-            elif any(kw in title_lower for kw in ["multipack", "bundle", "twin pack", "duo pack"]):
-                is_bundle = True
-                pack_size = 2  # Default for generic bundle terms
+            # Detect pack/bundle using shared pack size detection
+            from stages.image_verify import detect_pack_size
+            pack_size = detect_pack_size(title)
+            is_bundle = pack_size > 1
 
             # Only include if reasonably related
             similarity = fuzz.token_sort_ratio(product.name.lower(), title_lower)

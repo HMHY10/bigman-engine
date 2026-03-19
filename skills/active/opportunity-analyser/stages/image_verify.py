@@ -19,6 +19,7 @@ import anthropic
 import requests as http_requests
 
 import config
+from vault import log, strip_json_fences
 
 SKILL = "opportunity-analyser"
 
@@ -44,8 +45,6 @@ Return ONLY a JSON object:
 }}"""
 
 
-def log(msg):
-    print(f"{datetime.now().isoformat()} [{SKILL}:image-verify] {msg}")
 
 
 def detect_pack_size(title):
@@ -108,12 +107,8 @@ def call_vision(image_b64, media_type, product_name, ean):
                 ],
             }],
         )
-        raw = resp.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
-        return json.loads(raw.strip())
+        raw = strip_json_fences(resp.content[0].text)
+        return json.loads(raw)
     except Exception as e:
         log(f"vision call failed: {e}")
         return None

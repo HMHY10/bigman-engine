@@ -14,12 +14,11 @@ from datetime import datetime, timedelta
 
 import config
 
-SKILL = "opportunity-analyser"
+from vault import log
+
 HIGH_DEMAND_THRESHOLD = 200  # est_monthly_sales above this = high demand
 
 
-def log(msg):
-    print(f"{datetime.now().isoformat()} [{SKILL}:alerts] {msg}")
 
 
 def _active_file(data_dir=None):

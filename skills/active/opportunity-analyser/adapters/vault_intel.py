@@ -19,6 +19,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
+from vault import log, strip_json_fences
 
 SKILL = "opportunity-analyser"
 VAULT_FOLDERS = [
@@ -39,8 +40,6 @@ If no pricing signals found, return an empty array [].
 Only return the JSON array, no other text."""
 
 
-def log(msg):
-    print(f"{datetime.now().isoformat()} [{SKILL}:vault-intel] {msg}")
 
 
 def call_haiku(text, note_path):
@@ -53,11 +52,7 @@ def call_haiku(text, note_path):
             messages=[{"role": "user", "content": f"Note: {note_path}\n\n{text}\n\n{EXTRACT_PROMPT}"}],
         )
         raw = resp.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
-        raw = raw.strip()
+        raw = strip_json_fences(raw)
         return json.loads(raw)
     except Exception as e:
         log(f"haiku extraction failed for {note_path}: {e}")
@@ -146,20 +141,28 @@ def save_competitor_data(signals, data_dir=None):
     comp_dir = os.path.join(data_dir, "competitor")
     os.makedirs(comp_dir, exist_ok=True)
 
+    # Group signals by EAN to avoid N+1 file reads/writes
+    by_ean = {}
     for signal in signals:
         ean = signal.get("ean")
-        if not ean:
-            continue
+        if ean:
+            by_ean.setdefault(ean, []).append(signal)
+
+    for ean, ean_signals in by_ean.items():
         path = os.path.join(comp_dir, f"{ean}.json")
         existing = []
         if os.path.exists(path):
             with open(path) as f:
                 existing = json.load(f)
-        # Dedup by competitor+date+price
-        key = f"{signal.get('competitor')}:{signal.get('date')}:{signal.get('price')}"
         existing_keys = {f"{s.get('competitor')}:{s.get('date')}:{s.get('price')}" for s in existing}
-        if key not in existing_keys:
-            existing.append(signal)
+        changed = False
+        for signal in ean_signals:
+            key = f"{signal.get('competitor')}:{signal.get('date')}:{signal.get('price')}"
+            if key not in existing_keys:
+                existing.append(signal)
+                existing_keys.add(key)
+                changed = True
+        if changed:
             with open(path, "w") as f:
                 json.dump(existing, f, indent=2)
 

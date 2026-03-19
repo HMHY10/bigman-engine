@@ -51,3 +51,12 @@ def vault_read(vault_path: str) -> str | None:
         return result.stdout
     except subprocess.TimeoutExpired:
         return None
+
+
+def strip_json_fences(text: str) -> str:
+    """Strip markdown code fences from LLM JSON output."""
+    import re
+    text = text.strip()
+    text = re.sub(r'^```[a-z]*\n?', '', text, flags=re.MULTILINE)
+    text = re.sub(r'\n?```$', '', text)
+    return text.strip()

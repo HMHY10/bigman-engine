@@ -15,7 +15,7 @@ from datetime import datetime, date, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import config
-from vault import vault_write, log as vault_log
+from vault import vault_write, log
 
 SKILL = "opportunity-analyser"
 SNAPSHOT_DIR = os.path.join(config.INTEL_ROOT, "competitor-snapshots")
@@ -23,8 +23,6 @@ COMPETITOR_DIR = os.path.join(config.INTEL_ROOT, "competitor")
 REPORT_VAULT_PATH = "07-Marketplace/Buying/Competitor"
 
 
-def log(msg):
-    print(f"{datetime.now().isoformat()} [{SKILL}:competitor-monitor] {msg}")
 
 
 def load_previous_snapshot():
