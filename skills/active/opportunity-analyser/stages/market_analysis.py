@@ -1,5 +1,8 @@
+import json
+import os
 """Stage 3: Market analysis — BSR, sellers, sales estimates, pricing."""
 from clients import sp_api, rainforest, baselinker
+from clients.ebay import EbayClient
 from config import RAINFOREST_PRIORITY
 from models import AmazonMatch, MarketData, Product
 from vault import log

@@ -94,6 +94,25 @@ def run(
 
     rec.score = round(score, 3)
 
+    # ── Competitive position adjustment ───────────────────
+    if market and market.competitor_prices:
+        our_price = margin.sell_price if margin else None
+        if our_price:
+            cheaper_competitors = [
+                c for c in market.competitor_prices
+                if c.get("price") and c["price"] < our_price and c.get("marketplace") != "wholesale"
+            ]
+            if len(cheaper_competitors) >= 3:
+                rec.reasons.append("high_competitor_pressure")
+                log(f"competitive risk: {len(cheaper_competitors)} competitors cheaper")
+            stockout_signals = [
+                c for c in market.competitor_prices
+                if "stockout" in str(c.get("notes", "")).lower() or "out of stock" in str(c.get("notes", "")).lower()
+            ]
+            if stockout_signals:
+                rec.score = min(rec.score + 0.05, 1.0)
+                log(f"opportunity: {len(stockout_signals)} competitor stockout signals")
+
     if needs_review:
         rec.classification = "review"
         rec.reasons.append("Flagged for manual verification (BuyBotPro)")
