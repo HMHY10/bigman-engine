@@ -67,6 +67,23 @@ CATEGORY_THRESHOLDS = {
     "electronics": {"min_roi": 25, "min_profit": 5.00},
 }
 
+# ── eBay ──────────────────────────────────────────────
+EBAY_CACHE_TTL_DAYS = int(os.getenv("OPP_EBAY_CACHE_TTL", "7"))
+EBAY_DAILY_BUDGET = int(os.getenv("OPP_EBAY_BUDGET", "500"))
+EBAY_DOMAIN = os.getenv("OPP_EBAY_DOMAIN", "EBAY_GB")
+
+# ── Price Alerts ──────────────────────────────────────
+ALERT_MAX_ACTIVE = int(os.getenv("OPP_ALERT_MAX", "200"))
+ALERT_MARGIN_GAP_THRESHOLD = float(os.getenv("OPP_ALERT_GAP", "0.20"))
+ALERT_LOW_VOLUME_EXPIRY_DAYS = int(os.getenv("OPP_ALERT_EXPIRY", "30"))
+ALERT_MOQ_VOLUME_RATIO_THRESHOLD = int(os.getenv("OPP_ALERT_MOQ_RATIO", "10"))
+
+# ── Competitor Monitor ────────────────────────────────
+COMPETITOR_SNAPSHOT_RETENTION_DAYS = int(os.getenv("OPP_COMP_RETENTION", "90"))
+
+# ── Image Verification ────────────────────────────────
+IMAGE_VERIFY_CONFIDENCE_THRESHOLD = float(os.getenv("OPP_IMG_CONFIDENCE", "0.7"))
+
 # ── Paths ─────────────────────────────────────────────────────────
 REPO_ROOT = os.getenv("REPO_ROOT", "/opt/bigman-engine")
 DATA_ROOT = f"{REPO_ROOT}/data/opportunities"

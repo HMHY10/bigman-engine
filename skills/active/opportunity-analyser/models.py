@@ -39,6 +39,8 @@ class AmazonMatch:
     is_variation: bool = False
     parent_asin: str = ""
     brand_mismatch: bool = False
+    image_url: Optional[str] = None
+    alternate_asins: Optional[list] = None  # [{"asin": str, "title": str, "is_bundle": bool, "pack_size": int}]
 
 @dataclass
 class ComplianceResult:
@@ -62,6 +64,10 @@ class MarketData:
     est_monthly_sales: int = 0
     data_source: str = ""          # "sp_api", "rainforest", "bsr_estimate"
     internal_velocity: dict = field(default_factory=dict)  # BaseLinker sales data
+    ebay_sold_count: Optional[int] = None
+    ebay_price_range: Optional[dict] = None  # {"min": float, "max": float, "avg": float}
+    ebay_sell_through: Optional[float] = None
+    competitor_prices: Optional[list] = None  # [{"competitor": str, "price": float, "marketplace": str, "date": str}]
 
 @dataclass
 class MarginResult:
@@ -96,4 +102,9 @@ class Recommendation:
     score: float = 0.0
     reasons: list[str] = field(default_factory=list)
     analysed_at: str = ""
+    pack_size: int = 1
+    unit_cost: Optional[float] = None
+    image_flags: list = field(default_factory=list)
+    ebay_sold_data: Optional[dict] = None
+    competitor_data: Optional[dict] = None
     raw_predictors: dict = field(default_factory=dict)  # all data for algo training
