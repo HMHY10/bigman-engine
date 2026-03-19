@@ -42,6 +42,86 @@ If no products can be extracted, return: []
 Email content:
 """
 
+def is_qogita_price_alert(body):
+    """Detect Qogita price alert notification emails from body content."""
+    if not body:
+        return False
+    body_lower = body.lower()[:1000]
+    if 'qogita' not in body_lower:
+        return False
+    return any(kw in body_lower for kw in [
+        'price alert', 'price drop', 'price notification',
+        'target price reached', 'price has dropped', 'price has been reduced',
+    ])
+
+
+def extract_price_alert_data(body):
+    """Extract product + price from a Qogita price alert email body."""
+    import anthropic
+    client = anthropic.Anthropic()
+    prompt = """Extract the product and new price from this Qogita price alert email.
+Return a JSON object: {"product_name": "...", "ean": "...", "new_price": number, "currency": "EUR or GBP"}
+If you can't extract, return null."""
+
+    try:
+        resp = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=300,
+            messages=[{'role': 'user', 'content': prompt + '\n\nEmail:\n' + body[:2000]}],
+        )
+        raw = resp.content[0].text.strip()
+        raw = re.sub(r'^```[a-z]*\n?', '', raw, flags=re.MULTILINE)
+        raw = re.sub(r'\n?```$', '', raw)
+        return json.loads(raw.strip())
+    except Exception as e:
+        log(f'price alert extraction failed: {e}')
+        return None
+
+
+def handle_price_alert(alert_data):
+    """Process a triggered price alert — re-analyse and optionally auto-execute."""
+    from alerts.qogita_alerts import load_active_alerts, save_active_alerts
+    from execute import has_prior_approval
+
+    ean = alert_data.get('ean')
+    new_price = alert_data.get('new_price')
+    if not ean or not new_price:
+        log('incomplete alert data, skipping')
+        return
+
+    active = load_active_alerts()
+    tracked = next((a for a in active if a['ean'] == ean), None)
+
+    if not tracked:
+        log(f'untracked alert for {ean}, adding to queue anyway')
+
+    # Convert EUR to GBP if needed
+    if alert_data.get('currency') == 'EUR':
+        from fx import convert
+        new_price = convert(new_price, 'EUR', 'GBP')
+        if not new_price:
+            log(f'FX conversion failed for alert {ean}')
+            return
+
+    # Queue for re-analysis with new price
+    from queue_manager import enqueue
+    enqueue({
+        'product': {'ean': ean, 'name': alert_data.get('product_name', ''),
+                     'buy_price': new_price, 'currency': 'GBP'},
+        'source': 'price-alert',
+        'supplier': 'Qogita',
+        'priority': True,
+        'auto_execute': has_prior_approval(ean),
+    })
+    log(f'price alert queued: {ean} at £{new_price:.2f} (auto_execute={has_prior_approval(ean)})')
+
+    # Remove from active alerts
+    if tracked:
+        active = [a for a in active if a['ean'] != ean]
+        save_active_alerts(active)
+
+
+
 
 def extract_products(text: str) -> list[dict]:
     """Use Claude to extract products from email text."""
@@ -90,6 +170,13 @@ def process_email(vault_path: str = "", body: str = "", supplier: str = "Email S
     elif not body:
         log("email_offers: no input provided")
         return 0
+
+    # Check if this is a price alert (before standard supplier-offer extraction)
+    if is_qogita_price_alert(body):
+        alert_data = extract_price_alert_data(body)
+        if alert_data:
+            handle_price_alert(alert_data)
+            return 0  # Handled as price alert, not a supplier offer
 
     products = extract_products(body)
     if not products:

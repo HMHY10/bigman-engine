@@ -138,3 +138,34 @@ def move_to_pending_retry(filepath: str):
     with open(dest, "w") as f:
         json.dump(data, f)
     os.remove(filepath)
+
+
+def enqueue(opportunity_data: dict, priority: bool = False):
+    """Programmatically enqueue an opportunity for analysis.
+
+    opportunity_data: dict with {product: {ean, name, buy_price, currency}, source, supplier}
+    priority: if True, filename starts with "p-" for priority processing.
+    """
+    import uuid
+    from vault import log
+
+    opp_id = f"{opportunity_data.get('source', 'unknown')}-{uuid.uuid4().hex[:8]}"
+    prefix = "p-" if priority or opportunity_data.get("priority") else ""
+    filename = f"{prefix}{opp_id}.json"
+    filepath = os.path.join(QUEUE_PENDING, filename)
+
+    opp = {
+        "id": opp_id,
+        "source": opportunity_data.get("source", "unknown"),
+        "supplier": opportunity_data.get("supplier", "unknown"),
+        "received_at": datetime.now(timezone.utc).isoformat(),
+        "products": [opportunity_data["product"]] if "product" in opportunity_data else opportunity_data.get("products", []),
+    }
+    # Carry through auto_execute flag if present
+    if opportunity_data.get("auto_execute"):
+        opp["auto_execute"] = True
+
+    os.makedirs(QUEUE_PENDING, exist_ok=True)
+    with open(filepath, "w") as f:
+        json.dump(opp, f, indent=2)
+    log(f"enqueued: {opp_id} ({filename})")
