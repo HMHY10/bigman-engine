@@ -1,0 +1,4 @@
+{
+  "title": "Handle malformed task routing system error with missing description",
+  "job": "This is a malformed task — a system error or truncated message got routed through the task pipeline \n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: This is a malformed task — a system error or truncated message got routed through the task pipeline instead of being handled at the infrastructure level. The description references a missing Anthropic"
+}
