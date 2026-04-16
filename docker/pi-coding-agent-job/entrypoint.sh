@@ -46,6 +46,16 @@ for skill_dir in /job/skills/active/*/; do
     fi
 done
 
+# Install Python deps for active skills (per-skill venvs at /job/venvs/{skill})
+for skill_dir in /job/skills/active/*/; do
+    if [ -f "${skill_dir}requirements.txt" ]; then
+        skill_name=$(basename "$skill_dir")
+        echo "Installing Python skill deps: ${skill_name}"
+        python3 -m venv "/job/venvs/${skill_name}"
+        "/job/venvs/${skill_name}/bin/pip" install --quiet -r "${skill_dir}requirements.txt"
+    fi
+done
+
 # Start Chrome if available (installed by browser-tools skill via Puppeteer)
 CHROME_PID=""
 CHROME_BIN=$(find /home/agent/.cache/puppeteer -name "chrome" -type f 2>/dev/null | head -1)

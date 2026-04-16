@@ -5,6 +5,9 @@ RUN apt-get update && apt-get install -y \
     jq \
     curl \
     procps \
+    python3 \
+    python3-pip \
+    python3-venv \
     # Chrome/Chromium dependencies
     libnss3 \
     libnspr4 \

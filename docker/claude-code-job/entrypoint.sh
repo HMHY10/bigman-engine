@@ -74,6 +74,16 @@ for skill_dir in /job/skills/active/*/; do
     fi
 done
 
+# Install Python deps for active skills (per-skill venvs at /job/venvs/{skill})
+for skill_dir in /job/skills/active/*/; do
+    if [ -f "${skill_dir}requirements.txt" ]; then
+        skill_name=$(basename "$skill_dir")
+        echo "Installing Python skill deps: ${skill_name}"
+        python3 -m venv "/job/venvs/${skill_name}"
+        "/job/venvs/${skill_name}/bin/pip" install --quiet -r "${skill_dir}requirements.txt"
+    fi
+done
+
 # Register Playwright MCP server (browser automation via native Claude Code tools)
 claude mcp add --transport stdio playwright -- npx -y @playwright/mcp@latest --headless --browser chromium
 
