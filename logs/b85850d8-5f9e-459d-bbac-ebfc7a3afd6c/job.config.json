@@ -1,0 +1,4 @@
+{
+  "title": "Identify and report malformed task submission pipeline bug",
+  "job": "The task itself is malformed — title truncated, description cuts off mid-sentence, no actual instruc\n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: The task itself is malformed — title truncated, description cuts off mid-sentence, no actual instruction present. Nothing actionable here. This looks like a pipeline or submission bug where the task c"
+}
