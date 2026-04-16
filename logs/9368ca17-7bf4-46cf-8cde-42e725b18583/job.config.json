@@ -1,4 +1,0 @@
-{
-  "title": "Handle API 529 Error Routing Artifact - No Action Required",
-  "job": "This is a routing artifact, not a real task. An Anthropic API 529 (overloaded_error) got mis-routed \n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: This is a routing artifact, not a real task. An Anthropic API 529 (overloaded_error) got mis-routed through the task pipeline and landed here as a fake task description. No action needed on this speci"
-}
