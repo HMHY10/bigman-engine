@@ -1,4 +1,0 @@
-{
-  "title": "Diagnose and fix truncated task submission pipeline issues",
-  "job": "Task arrived truncated — no actionable content. Both the title and description cut off mid-sentence.\n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: Task arrived truncated — no actionable content. Both the title and description cut off mid-sentence. Nothing to act on here. The submission form or pipeline appears to be clipping input before it reac"
-}
