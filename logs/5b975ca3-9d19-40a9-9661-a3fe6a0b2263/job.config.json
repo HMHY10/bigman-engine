@@ -1,4 +1,0 @@
-{
-  "title": "Failed pipeline message regarding missing Anthropic SDK installation",
-  "job": "This task is a malformed/failed pipeline message, not a real operational task. The description is a \n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: This task is a malformed/failed pipeline message, not a real operational task. The description is a truncated error: 'anthropic SDK not installed. Run: pip install anthropic --break-system-packages'. "
-}
