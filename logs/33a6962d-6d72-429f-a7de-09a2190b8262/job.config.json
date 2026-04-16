@@ -1,0 +1,4 @@
+{
+  "title": "Handle malformed dashboard error message submission task",
+  "job": "This is a malformed task — looks like a dashboard error message or a meta-note got submitted through\n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: This is a malformed task — looks like a dashboard error message or a meta-note got submitted through the task pipeline instead of being caught at the infrastructure level. The description is truncated"
+}
