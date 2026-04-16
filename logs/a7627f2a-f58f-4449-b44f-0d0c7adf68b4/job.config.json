@@ -1,0 +1,4 @@
+{
+  "title": "Deploy updated pricing configuration rules to production environment",
+  "job": "Deploy new pricing config to production\n\nPush updated pricing rules to production environment"
+}
