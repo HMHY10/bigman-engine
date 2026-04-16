@@ -1,0 +1,4 @@
+{
+  "title": "Fix Missing Anthropic Python SDK Installation Error",
+  "job": "This is a system/infrastructure error — the Anthropic Python SDK isn't installed in the environment \n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: This is a system/infrastructure error — the Anthropic Python SDK isn't installed in the environment running the agent pipeline. The error message is self-explanatory: `pip install anthropic --break-sy"
+}
