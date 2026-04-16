@@ -1,0 +1,4 @@
+{
+  "title": "System Echo Pipeline Placeholder - No Task Dispatch",
+  "job": "This is a system echo — no actual task was dispatched. The message 'Task dispatched to Bigman Engine\n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: This is a system echo — no actual task was dispatched. The message 'Task dispatched to Bigman Engine for background processing' is a pipeline placeholder, not a user request. Nothing to action."
+}
