@@ -1,0 +1,4 @@
+{
+  "title": "Handle corrupted task with pip install anthropic fragment",
+  "job": "Task is corrupted and contains no actionable content. The message fragment references 'pip install a\n\n[dashboard_chat] Message from Agent Command Centre dashboard. User asks: Task is corrupted and contains no actionable content. The message fragment references 'pip install anthropic' — looks like a test message or someone setting up the agent pipeline locally. Nothing to a"
+}
