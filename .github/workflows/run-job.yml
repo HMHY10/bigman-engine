@@ -69,9 +69,12 @@ jobs:
             exit 1
           fi
 
-          # Build SECRETS JSON for the job container (PopeBot entrypoint parses this)
+          # Build SECRETS JSON for the job container.
+          # Phase 0 of the OAuth migration: the claude-code-job entrypoint
+          # unsets ANTHROPIC_API_KEY by design and reads CLAUDE_CODE_OAUTH_TOKEN
+          # from $SECRETS. See The-Bridge repo docs/superpowers/specs/2026-04-17-oauth-model-routing-migration-design.md.
           SECRETS=$(echo "$DOPPLER_SECRETS" | jq -c '{
-            ANTHROPIC_API_KEY: .ANTHROPIC_API_KEY,
+            CLAUDE_CODE_OAUTH_TOKEN: .CLAUDE_CODE_OAUTH_TOKEN,
             BRAVE_API_KEY: .BRAVE_API_KEY,
             GH_TOKEN: .GH_TOKEN,
             OBSIDIAN_API_KEY: .OBSIDIAN_API_KEY,
@@ -106,7 +109,10 @@ jobs:
           OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
           AGENT_BACKEND: ${{ steps.job-config.outputs.agent_backend || vars.AGENT_BACKEND || '' }}
         run: |
-          AGENT_BACKEND="${AGENT_BACKEND:-pi}"
+          # Phase 0 OAuth migration: default to claude-code backend so jobs
+          # run against the OAuth-capable image. The Pi backend path is
+          # deprecated in Phase 2 of the migration plan.
+          AGENT_BACKEND="${AGENT_BACKEND:-claude-code}"
           if [ -n "$JOB_IMAGE_URL" ]; then
             IMAGE="${JOB_IMAGE_URL}:${THEPOPEBOT_VERSION}"
           elif [ "$AGENT_BACKEND" = "claude-code" ]; then
@@ -118,10 +124,11 @@ jobs:
 
           export LLM_SECRETS='{}'
 
-          # The stock entrypoint unsets ANTHROPIC_API_KEY (designed for OAuth).
-          # We use API key auth, so patch the entrypoint to keep it.
+          # The claude-code-job stock entrypoint unsets ANTHROPIC_API_KEY by
+          # design and reads CLAUDE_CODE_OAUTH_TOKEN from $SECRETS. We no longer
+          # override the entrypoint — the API-key injection + sed patch from
+          # the pre-OAuth era have been removed as part of Phase 0.
           docker run --rm \
-            --entrypoint /bin/bash \
             -e REPO_URL="${{ github.server_url }}/${{ github.repository }}.git" \
             -e BRANCH="${{ github.ref_name }}" \
             -e SECRETS \
@@ -130,12 +137,11 @@ jobs:
             -e LLM_PROVIDER="${LLM_PROVIDER}" \
             -e OPENAI_BASE_URL="${OPENAI_BASE_URL}" \
             -e AGENT_BACKEND="${AGENT_BACKEND}" \
-            -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+            -e CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN}" \
             -e BRAVE_API_KEY="${BRAVE_API_KEY}" \
             -e OBSIDIAN_API_KEY="${OBSIDIAN_API_KEY}" \
             -e OBSIDIAN_HOST="${OBSIDIAN_HOST}" \
-            "$IMAGE" \
-            -c 'cp /entrypoint.sh /tmp/entrypoint.sh && sed -i "/unset ANTHROPIC_API_KEY/d" /tmp/entrypoint.sh && exec /tmp/entrypoint.sh'
+            "$IMAGE"
 
       - name: Sync outputs to Obsidian vault
         if: always()
