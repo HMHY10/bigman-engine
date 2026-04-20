@@ -1,7 +1,0 @@
-{
-  "title": "Phase 0 OAuth smoke test (v2 with API key retained)",
-  "job": "Smoke test: reply with exactly 'v2-ok' (no quotes, no other text). Do not use any tools.",
-  "agent_backend": "claude-code",
-  "llm_provider": "anthropic",
-  "llm_model": "claude-sonnet-4-6"
-}
