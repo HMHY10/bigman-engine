@@ -1,7 +1,0 @@
-{
-  "title": "Phase 0 soak run 2",
-  "job": "Soak 2 of 3. Reply with exactly 'soak2-ok' (no quotes, no other text). Do not use any tools.",
-  "agent_backend": "claude-code",
-  "llm_provider": "anthropic",
-  "llm_model": "claude-sonnet-4-6"
-}
