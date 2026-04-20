@@ -1,0 +1,7 @@
+{
+  "title": "Phase 0 post-merge verification",
+  "job": "Post-merge verification. Reply with exactly 'merged-ok' (no quotes, no other text). Do not use any tools.",
+  "agent_backend": "claude-code",
+  "llm_provider": "anthropic",
+  "llm_model": "claude-sonnet-4-6"
+}
