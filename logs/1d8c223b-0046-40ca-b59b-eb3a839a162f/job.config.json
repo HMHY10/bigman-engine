@@ -1,0 +1,7 @@
+{
+  "title": "Phase 0 OAuth smoke test",
+  "job": "This is a smoke test for Phase 0 of the OAuth migration. Please reply with exactly the three characters 'ok!' and nothing else. Do not call any tools.",
+  "agent_backend": "claude-code",
+  "llm_provider": "anthropic",
+  "llm_model": "claude-sonnet-4-6"
+}
