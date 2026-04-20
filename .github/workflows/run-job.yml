@@ -72,9 +72,13 @@ jobs:
           # Build SECRETS JSON for the job container.
           # Phase 0 of the OAuth migration: the claude-code-job entrypoint
           # unsets ANTHROPIC_API_KEY by design and reads CLAUDE_CODE_OAUTH_TOKEN
-          # from $SECRETS. See The-Bridge repo docs/superpowers/specs/2026-04-17-oauth-model-routing-migration-design.md.
+          # from $SECRETS. ANTHROPIC_API_KEY stays in the payload so that any
+          # in-container subprocess (repo skills that re-parse $SECRETS) can
+          # still reach it — Phase 3 migrates those skills off the API.
+          # See The-Bridge repo docs/superpowers/specs/2026-04-17-oauth-model-routing-migration-design.md.
           SECRETS=$(echo "$DOPPLER_SECRETS" | jq -c '{
             CLAUDE_CODE_OAUTH_TOKEN: .CLAUDE_CODE_OAUTH_TOKEN,
+            ANTHROPIC_API_KEY: .ANTHROPIC_API_KEY,
             BRAVE_API_KEY: .BRAVE_API_KEY,
             GH_TOKEN: .GH_TOKEN,
             OBSIDIAN_API_KEY: .OBSIDIAN_API_KEY,
