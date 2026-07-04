@@ -1,5 +1,16 @@
 [
   {
+    "name": "picklist-scan-return",
+    "watch_path": "/webhook/picklist-scan",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- bash /app/skills/active/picklist-ops/scan-return.sh '{{body}}'"
+      }
+    ],
+    "enabled": true
+  },
+  {
     "name": "on-github-event",
     "watch_path": "/github/webhook",
     "actions": [

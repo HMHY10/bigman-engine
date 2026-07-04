@@ -1,5 +1,19 @@
 [
   {
+    "name": "picklist-overnight",
+    "schedule": "0 6 * * 1-6",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash /app/skills/active/picklist-ops/overnight-batch.sh",
+    "enabled": true
+  },
+  {
+    "name": "picklist-daytime",
+    "schedule": "*/5 8-18 * * 1-6",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash /app/skills/active/picklist-ops/daytime-batch.sh",
+    "enabled": true
+  },
+  {
     "name": "heartbeat",
     "schedule": "*/30 * * * *",
     "type": "agent",
