@@ -28,6 +28,10 @@
     "./cluster/stream": "./lib/cluster/stream.js",
     "./auth/components": "./lib/auth/components/index.js",
     "./middleware": "./lib/auth/middleware.js",
+    "./picklist": "./lib/picklist/index.js",
+    "./picklist/actions": "./lib/picklist/actions.js",
+    "./db/orders": "./lib/db/orders.js",
+    "./db/picklists": "./lib/db/picklists.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -91,6 +95,7 @@
     "lucide-react": "^0.400.0",
     "node-cron": "^3.0.3",
     "open": "^10.0.0",
+    "qrcode": "^1.5.4",
     "split2": "^4.2.0",
     "streamdown": "^2.2.0",
     "tailwind-merge": "^3.0.0",

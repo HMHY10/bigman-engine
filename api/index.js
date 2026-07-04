@@ -31,7 +31,7 @@ function getFireTriggers() {
 }
 
 // Routes that have their own authentication
-const PUBLIC_ROUTES = ['/telegram/webhook', '/github/webhook', '/vault-sync', '/ping'];
+const PUBLIC_ROUTES = ['/telegram/webhook', '/github/webhook', '/vault-sync', '/ping', '/picklist/scan'];
 
 /**
  * Timing-safe string comparison.
@@ -293,6 +293,105 @@ async function handleJobStatus(request) {
   }
 }
 
+/**
+ * POST /api/orders — Ingest one or more orders from an external source (Shopify, etc.).
+ * Body: { orders: [{ externalId, externalRef, source, customerName, customerEmail, shippingAddress, items: [{ sku, productName, quantity, binLocation }] }] }
+ * OR a single order object (not wrapped in array).
+ */
+async function handleOrdersIngest(request) {
+  const body = await request.json();
+  const rawOrders = Array.isArray(body.orders) ? body.orders : Array.isArray(body) ? body : [body];
+
+  if (!rawOrders.length) {
+    return Response.json({ error: 'No orders provided' }, { status: 400 });
+  }
+
+  const { createOrder, getOrderByExternalId } = await import('../lib/db/orders.js');
+  const results = [];
+
+  for (const raw of rawOrders) {
+    if (!raw.externalId) {
+      results.push({ error: 'Missing externalId', raw });
+      continue;
+    }
+    // Idempotency: skip if already imported
+    const existing = getOrderByExternalId(raw.externalId, raw.source || 'shopify');
+    if (existing) {
+      results.push({ skipped: true, id: existing.id, externalId: raw.externalId });
+      continue;
+    }
+    try {
+      const order = createOrder(raw, raw.items || []);
+      results.push({ created: true, id: order.id, externalId: raw.externalId });
+    } catch (err) {
+      console.error('Order ingest error:', err);
+      results.push({ error: err.message, externalId: raw.externalId });
+    }
+  }
+
+  return Response.json({ ok: true, results });
+}
+
+/**
+ * POST /api/picklist/auto-batch — Trigger daytime auto-batch (called by cron webhook).
+ * Authenticated via standard x-api-key (create a key in Settings > API Keys).
+ */
+async function handleAutoBatch(request) {
+  const body = await request.json().catch(() => ({}));
+  const batchSize = parseInt(body.batch_size || '25', 10);
+
+  const { generateBatchPicklist } = await import('../lib/picklist/index.js');
+  const result = generateBatchPicklist(batchSize);
+  return Response.json(result);
+}
+
+/**
+ * POST /api/picklist/overnight — Trigger overnight picklist generation (called by cron webhook).
+ * Authenticated via standard x-api-key (create a key in Settings > API Keys).
+ */
+async function handleOvernightBatch(request) {
+  const { generateOvernightPicklist } = await import('../lib/picklist/index.js');
+  const result = generateOvernightPicklist();
+  return Response.json(result);
+}
+
+/**
+ * POST /api/picklist/scan — Called when a picker scans the picklist QR code on return.
+ * Marks the picklist as completed and triggers shipping label printing via webhook.
+ * Auth: x-api-key (scanner devices must be configured with an API key).
+ * This route is in PUBLIC_ROUTES to skip the central auth gate — it does its own auth check
+ * so it can handle both api-key and a simpler scanner-secret for devices.
+ */
+async function handlePicklistScan(request) {
+  const apiKey = request.headers.get('x-api-key');
+  if (!apiKey || !verifyApiKey(apiKey)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const picklistId = body.picklist_id;
+  if (!picklistId) return Response.json({ error: 'Missing picklist_id' }, { status: 400 });
+
+  const { markPicklistCompleted, getPicklistById } = await import('../lib/db/picklists.js');
+  const picklist = getPicklistById(picklistId);
+  if (!picklist) return Response.json({ error: 'Picklist not found' }, { status: 404 });
+  if (picklist.status === 'completed') return Response.json({ ok: true, already_completed: true });
+
+  const orderIds = markPicklistCompleted(picklistId);
+
+  // Fire shipping label webhook if configured
+  const webhookUrl = getConfig('PICKLIST_SHIPPING_WEBHOOK_URL');
+  if (webhookUrl) {
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ picklist_id: picklistId, order_ids: orderIds }),
+    }).catch(err => console.error('[picklist-scan] Shipping webhook error:', err));
+  }
+
+  return Response.json({ ok: true, picklist_id: picklistId, order_ids: orderIds });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Next.js Route Handlers (catch-all)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -327,12 +426,16 @@ async function POST(request) {
 
   // Route to handler
   switch (routePath) {
-    case '/create-job':          return handleWebhook(request);
-    case '/vault-sync':          return handleVaultSync(request);
-    case '/telegram/webhook':   return handleTelegramWebhook(request);
-    case '/telegram/register':  return handleTelegramRegister(request);
-    case '/github/webhook':     return handleGithubWebhook(request);
-    default:                    return Response.json({ error: 'Not found' }, { status: 404 });
+    case '/create-job':             return handleWebhook(request);
+    case '/vault-sync':             return handleVaultSync(request);
+    case '/telegram/webhook':       return handleTelegramWebhook(request);
+    case '/telegram/register':      return handleTelegramRegister(request);
+    case '/github/webhook':         return handleGithubWebhook(request);
+    case '/orders':                 return handleOrdersIngest(request);
+    case '/picklist/auto-batch':    return handleAutoBatch(request);
+    case '/picklist/overnight':     return handleOvernightBatch(request);
+    case '/picklist/scan':          return handlePicklistScan(request);
+    default:                        return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
 

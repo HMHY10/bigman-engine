@@ -52,5 +52,25 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-overnight",
+    "schedule": "30 7 * * 1-5",
+    "type": "webhook",
+    "url": "http://localhost:3000/api/picklist/overnight",
+    "method": "POST",
+    "headers": { "x-api-key": "SET_YOUR_API_KEY_HERE", "Content-Type": "application/json" },
+    "vars": {},
+    "enabled": false
+  },
+  {
+    "name": "picklist-auto-batch",
+    "schedule": "*/15 8-18 * * 1-6",
+    "type": "webhook",
+    "url": "http://localhost:3000/api/picklist/auto-batch",
+    "method": "POST",
+    "headers": { "x-api-key": "SET_YOUR_API_KEY_HERE", "Content-Type": "application/json" },
+    "vars": { "batch_size": 25 },
+    "enabled": false
   }
 ]
