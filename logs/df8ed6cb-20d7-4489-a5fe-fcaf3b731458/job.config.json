@@ -1,4 +1,0 @@
-{
-  "title": "Build picklist automation system",
-  "job": "Build picklist automation system\n\nImplement auto-batch picklist generation with the following logic: (1) Auto-print all overnight orders grouped by SKU before warehouse opens, no hard 25-order cap when same-SKU volume is higher; (2) During the day, batch in ~25s with a time-limit fallback if threshold not reached; (3) Add 'Print next 25' and 'Print selected orders' manual buttons; (4) SKU grouping within picklists (no images needed); (5) Include QR codes and bin/location references; (6) Auto-print shipping label when picker scans picklist on return."
-}
