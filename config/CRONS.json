@@ -52,5 +52,21 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-morning-batch",
+    "schedule": "0 7 * * 1-5",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash ../skills/active/picklist-ops/morning-batch.sh",
+    "enabled": true,
+    "_comment": "Runs at 07:00 Mon-Fri. Batches all overnight ready-to-pick orders before the warehouse opens at 08:00. Adjust schedule to match actual warehouse open time."
+  },
+  {
+    "name": "picklist-daytime-batch",
+    "schedule": "*/30 8-17 * * 1-5",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash ../skills/active/picklist-ops/daytime-batch.sh",
+    "enabled": true,
+    "_comment": "Runs every 30 min during warehouse hours (08:00-17:00 Mon-Fri). Batches ~25 orders when threshold reached or time fallback triggered. Adjust hours to match warehouse schedule."
   }
 ]

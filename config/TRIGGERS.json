@@ -54,5 +54,29 @@
       { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_provider": "openai", "llm_model": "gpt-4o" }
     ],
     "enabled": false
+  },
+  {
+    "name": "picklist-scan-return",
+    "watch_path": "/webhook",
+    "actions": [
+      {
+        "type": "command",
+        "command": "if [ \"{{body.action}}\" = \"scan-return\" ]; then doppler run -p shared-services -c prd -- bash ../skills/active/picklist-ops/scan-return.sh \"{{body.batch_id}}\"; fi"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Fires when a picker scans the QR code on a returned picklist. Payload: {action: 'scan-return', batch_id: 'PL-YYYYMMDD-NNN'}. Fetches and prints shipping labels, updates BaseLinker order statuses."
+  },
+  {
+    "name": "picklist-manual-batch",
+    "watch_path": "/webhook",
+    "actions": [
+      {
+        "type": "command",
+        "command": "if [ \"{{body.action}}\" = \"manual-batch\" ]; then doppler run -p shared-services -c prd -- bash ../skills/active/picklist-ops/manual-batch.sh \"{{body.order_ids}}\"; fi"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Fires a manual picklist print. Payload: {action: 'manual-batch'} for next 25, or {action: 'manual-batch', order_ids: '125001,125002'} for specific orders."
   }
 ]
