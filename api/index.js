@@ -293,6 +293,41 @@ async function handleJobStatus(request) {
   }
 }
 
+/**
+ * POST /api/picklist/scan?order_id=XXXXX
+ * GET  /api/picklist/scan?order_id=XXXXX
+ *
+ * Called when a warehouse operative scans the QR code on a printed picklist.
+ * - Advances order status to "packing" (if PICKLIST_PACKING_STATUS_ID is set)
+ * - Returns the shipping label URL so pack-station software can print it
+ *
+ * Auth: x-api-key header (standard API auth)
+ */
+async function handlePicklistScan(request) {
+  const url = new URL(request.url);
+  const orderId = Number(url.searchParams.get('order_id'));
+
+  if (!orderId || isNaN(orderId)) {
+    return Response.json({ error: 'Missing or invalid order_id' }, { status: 400 });
+  }
+
+  try {
+    const { handleScan } = await import('../lib/picklist/actions.js');
+    const result = await handleScan(orderId);
+    if (result.error) return Response.json(result, { status: 404 });
+
+    // If a label URL is present, redirect the scanner browser to it
+    if (result.label_url && request.headers.get('accept')?.includes('text/html')) {
+      return Response.redirect(result.label_url, 302);
+    }
+
+    return Response.json(result);
+  } catch (err) {
+    console.error('Picklist scan error:', err);
+    return Response.json({ error: 'Scan failed', detail: err.message }, { status: 500 });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Next.js Route Handlers (catch-all)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -332,6 +367,7 @@ async function POST(request) {
     case '/telegram/webhook':   return handleTelegramWebhook(request);
     case '/telegram/register':  return handleTelegramRegister(request);
     case '/github/webhook':     return handleGithubWebhook(request);
+    case '/picklist/scan':       return handlePicklistScan(request);
     default:                    return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -345,9 +381,10 @@ async function GET(request) {
   if (authError) return authError;
 
   switch (routePath) {
-    case '/ping':           return Response.json({ message: 'Pong!' });
-    case '/jobs/status':    return handleJobStatus(request);
-    default:                return Response.json({ error: 'Not found' }, { status: 404 });
+    case '/ping':            return Response.json({ message: 'Pong!' });
+    case '/jobs/status':     return handleJobStatus(request);
+    case '/picklist/scan':   return handlePicklistScan(request);
+    default:                 return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
 

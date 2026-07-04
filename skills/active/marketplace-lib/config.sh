@@ -40,6 +40,27 @@ GRADUATION_MIN_CASES=10
 GRADUATION_APPROVAL_RATE=90
 GRADUATION_MIN_DAYS=7
 
+# ── Picklist Settings ──────────────────────────────────────────────────
+# PICKLIST_READY_STATUS_ID: BaseLinker order_status_id meaning "Ready to Pick"
+# Set in Doppler shared-services as PICKLIST_READY_STATUS_ID
+PICKLIST_READY_STATUS_ID="${PICKLIST_READY_STATUS_ID:-}"
+
+# Auto-batch fires when this many orders are ready (or time limit is reached)
+PICKLIST_BATCH_SIZE="${PICKLIST_BATCH_SIZE:-25}"
+
+# Time limit in seconds before forcing a partial batch (default: 1 hour)
+PICKLIST_TIME_LIMIT_SECONDS="${PICKLIST_TIME_LIMIT_SECONDS:-3600}"
+
+# Hours to look back for morning batch (covers overnight from ~6 PM the day before)
+PICKLIST_OVERNIGHT_HOURS="${PICKLIST_OVERNIGHT_HOURS:-13}"
+
+# State directory — must match the data/picklist path accessible to the event handler
+PICKLIST_STATE_DIR="${PICKLIST_STATE_DIR:-/app/data/picklist}"
+
+# Base URL for QR scan endpoint (e.g. https://bot.arrybarry.com)
+# Set in Doppler shared-services as PICKLIST_SCAN_BASE_URL
+PICKLIST_SCAN_BASE_URL="${PICKLIST_SCAN_BASE_URL:-}"
+
 # ── Cache Defaults ─────────────────────────────────────────────────────
 CACHE_DEFAULT_MAX_AGE=24   # hours
 CACHE_ROTATION_DAYS=7

@@ -29,3 +29,4 @@ Browser-facing features must use **Server Actions** (`'use server'` functions) w
 | POST | `/api/telegram/register` | `x-api-key` | Register bot token + webhook URL |
 | POST | `/api/github/webhook` | GitHub webhook secret | GitHub event handler |
 | POST | `/api/cluster/:clusterId/role/:roleId/webhook` | `x-api-key` | Trigger cluster role execution |
+| GET/POST | `/api/picklist/scan` | `x-api-key` | QR scan trigger — advance order to packing, return label URL (query: `?order_id=`) |
