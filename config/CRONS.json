@@ -52,5 +52,21 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-auto-check",
+    "schedule": "*/5 * * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash -c 'cd skills/active/picklist-ops && ./run.sh --auto'",
+    "enabled": true,
+    "_comment": "Auto-batch: triggers a picklist when >=25 orders are in ready status, or after the 1-hour time-limit. Requires PICKLIST_READY_STATUS_ID in Doppler."
+  },
+  {
+    "name": "picklist-morning-batch",
+    "schedule": "30 7 * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash -c 'cd skills/active/picklist-ops && ./run.sh --morning'",
+    "enabled": true,
+    "_comment": "Morning batch: prints ALL orders in ready status at 07:30 with no 25-order cap. Catches everything that arrived overnight."
   }
 ]

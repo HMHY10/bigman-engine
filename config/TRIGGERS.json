@@ -54,5 +54,41 @@
       { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_provider": "openai", "llm_model": "gpt-4o" }
     ],
     "enabled": false
+  },
+  {
+    "name": "picklist-print-next25",
+    "watch_path": "/webhook/picklist/next25",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- bash -c 'cd skills/active/picklist-ops && ./run.sh --manual-next25'"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Manual 'Print next 25' button. POST to /webhook/picklist/next25 with a valid x-api-key header. No body required."
+  },
+  {
+    "name": "picklist-print-selected",
+    "watch_path": "/webhook/picklist/selected",
+    "actions": [
+      {
+        "type": "command",
+        "command": "ORDER_IDS=$(printf '%s' '{{body}}' | jq -r '.order_ids // empty' | tr -cd '0-9,') && [ -n \"$ORDER_IDS\" ] && doppler run -p shared-services -c prd -- bash -c \"cd skills/active/picklist-ops && ./run.sh --manual-selected '$ORDER_IDS'\" || echo 'picklist-selected: no order_ids in request body'"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Manual 'Print selected orders' button. POST to /webhook/picklist/selected with body: {\"order_ids\": \"1234567,1234568\"}. x-api-key header required."
+  },
+  {
+    "name": "picklist-print-label",
+    "watch_path": "/webhook/picklist/print-label",
+    "actions": [
+      {
+        "type": "command",
+        "command": "ORDER_ID=$(printf '%s' '{{body}}' | jq -r '.order_id // empty' | tr -cd '0-9') && [ -n \"$ORDER_ID\" ] && doppler run -p shared-services -c prd -- bash -c \"cd skills/active/picklist-ops && ./print-label.sh '$ORDER_ID'\" || echo 'picklist-print-label: no order_id in request body'"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Programmatic label-print trigger. POST to /webhook/picklist/print-label with body: {\"order_id\": \"1234567\"}. Used when the pack station scanner app POSTs the QR scan result rather than opening a browser."
   }
 ]
