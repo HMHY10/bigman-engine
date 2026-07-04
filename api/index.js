@@ -8,6 +8,13 @@ import { createNotification } from '../lib/db/notifications.js';
 import { loadTriggers } from '../lib/triggers.js';
 import { verifyApiKey } from '../lib/db/api-keys.js';
 import { getConfig } from '../lib/config.js';
+import {
+  createOrder as dbCreateOrder,
+  getPicklistById,
+  getPicklistItems,
+  updatePicklistStatus,
+  updateOrdersBatchStatus,
+} from '../lib/db/picklists.js';
 
 // Bot token — resolved from DB/env, can be overridden by /telegram/register
 let telegramBotToken = null;
@@ -31,7 +38,7 @@ function getFireTriggers() {
 }
 
 // Routes that have their own authentication
-const PUBLIC_ROUTES = ['/telegram/webhook', '/github/webhook', '/vault-sync', '/ping'];
+const PUBLIC_ROUTES = ['/telegram/webhook', '/github/webhook', '/vault-sync', '/ping', '/picklist/scan'];
 
 /**
  * Timing-safe string comparison.
@@ -281,6 +288,99 @@ async function handleVaultSync(request) {
   }
 }
 
+/**
+ * POST /api/orders — Import one or more orders from an external system (Shopify, Amazon, etc).
+ * Accepts a single order object or an array.
+ * Required fields per order: orderNumber, sku, productName
+ * Optional: customerName, quantity, binLocation, source, notes
+ */
+async function handleOrderImport(request) {
+  try {
+    const body = await request.json();
+    const items = Array.isArray(body) ? body : [body];
+    const created = [];
+    const errors = [];
+
+    for (const item of items) {
+      if (!item.orderNumber || !item.sku || !item.productName) {
+        errors.push({ item, error: 'Missing required fields: orderNumber, sku, productName' });
+        continue;
+      }
+      try {
+        const order = dbCreateOrder({
+          orderNumber: String(item.orderNumber),
+          customerName: item.customerName || null,
+          sku: String(item.sku),
+          productName: String(item.productName),
+          quantity: Number(item.quantity) || 1,
+          binLocation: item.binLocation || null,
+          source: item.source || 'api',
+          notes: item.notes || null,
+        });
+        created.push(order);
+      } catch (err) {
+        errors.push({ item, error: err.message });
+      }
+    }
+
+    return Response.json({ ok: true, created: created.length, errors: errors.length, orders: created, failures: errors });
+  } catch (err) {
+    console.error('[orders] Import error:', err.message);
+    return Response.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+}
+
+/**
+ * GET /api/picklist/scan?id=PICKLIST_ID — Scanner endpoint.
+ * Called when a warehouse picker scans the picklist QR code on return.
+ * Marks the picklist as completed and fires the picklist-scan trigger
+ * (which can be configured to call a shipping label API).
+ * Public route — no API key required (protected by picklist ID obscurity).
+ */
+async function handlePicklistScan(request) {
+  const url = new URL(request.url);
+  const id = url.searchParams.get('id');
+
+  if (!id) {
+    return Response.json({ error: 'Missing id parameter' }, { status: 400 });
+  }
+
+  const picklist = getPicklistById(id);
+  if (!picklist) {
+    return Response.json({ error: 'Picklist not found' }, { status: 404 });
+  }
+
+  if (picklist.status === 'completed') {
+    return Response.json({ ok: true, message: 'Already completed', picklist });
+  }
+
+  // Mark picklist and its orders as completed/picked
+  updatePicklistStatus(id, 'completed');
+  const items = getPicklistItems(id);
+  const orderIds = items.map((i) => i.orderId);
+  if (orderIds.length) {
+    updateOrdersBatchStatus(orderIds, 'picked', id);
+  }
+
+  console.log(`[picklist-scan] Picklist ${id.slice(0, 8)} scanned — ${items.length} orders marked picked`);
+
+  // Fire triggers for /webhook/picklist-scan so the user can configure
+  // a shipping label webhook in TRIGGERS.json
+  try {
+    const fireTriggers = getFireTriggers();
+    fireTriggers('/webhook/picklist-scan', { picklist_id: id, order_ids: orderIds, order_count: items.length }, {}, {});
+  } catch (e) {
+    // Non-fatal
+  }
+
+  return Response.json({
+    ok: true,
+    picklist_id: id,
+    orders_picked: orderIds.length,
+    message: 'Picklist completed. Shipping labels queued.',
+  });
+}
+
 async function handleJobStatus(request) {
   try {
     const url = new URL(request.url);
@@ -332,6 +432,7 @@ async function POST(request) {
     case '/telegram/webhook':   return handleTelegramWebhook(request);
     case '/telegram/register':  return handleTelegramRegister(request);
     case '/github/webhook':     return handleGithubWebhook(request);
+    case '/orders':             return handleOrderImport(request);
     default:                    return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -345,9 +446,10 @@ async function GET(request) {
   if (authError) return authError;
 
   switch (routePath) {
-    case '/ping':           return Response.json({ message: 'Pong!' });
-    case '/jobs/status':    return handleJobStatus(request);
-    default:                return Response.json({ error: 'Not found' }, { status: 404 });
+    case '/ping':              return Response.json({ message: 'Pong!' });
+    case '/jobs/status':       return handleJobStatus(request);
+    case '/picklist/scan':     return handlePicklistScan(request);
+    default:                   return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }
 

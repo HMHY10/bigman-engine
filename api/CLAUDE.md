@@ -29,3 +29,5 @@ Browser-facing features must use **Server Actions** (`'use server'` functions) w
 | POST | `/api/telegram/register` | `x-api-key` | Register bot token + webhook URL |
 | POST | `/api/github/webhook` | GitHub webhook secret | GitHub event handler |
 | POST | `/api/cluster/:clusterId/role/:roleId/webhook` | `x-api-key` | Trigger cluster role execution |
+| POST | `/api/orders` | `x-api-key` | Import orders (single object or array); required fields: `orderNumber`, `sku`, `productName` |
+| GET | `/api/picklist/scan` | None (public, ID-secured) | Scanner endpoint — marks picklist completed and fires `picklist-scan-shipping-label` trigger |

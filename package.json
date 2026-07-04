@@ -28,6 +28,10 @@
     "./cluster/stream": "./lib/cluster/stream.js",
     "./auth/components": "./lib/auth/components/index.js",
     "./middleware": "./lib/auth/middleware.js",
+    "./picklist/db": "./lib/db/picklists.js",
+    "./picklist/generate": "./lib/picklist/generate.js",
+    "./picklist/print": "./lib/picklist/print.js",
+    "./picklist/actions": "./lib/picklist/actions.js",
     "./package.json": "./package.json"
   },
   "files": [

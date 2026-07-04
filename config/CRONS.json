@@ -52,5 +52,21 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-overnight-batch",
+    "schedule": "30 6 * * 1-6",
+    "type": "command",
+    "command": "node picklist-overnight.js",
+    "enabled": true,
+    "_comment": "Mon-Sat 6:30 AM: batch all overnight orders into one picklist before warehouse opens"
+  },
+  {
+    "name": "picklist-daytime-autobatch",
+    "schedule": "*/1 7-17 * * 1-6",
+    "type": "command",
+    "command": "node picklist-daytime.js",
+    "enabled": true,
+    "_comment": "Mon-Sat every minute 7am-5pm: auto-batch when >= 25 orders OR oldest order >= 25s old"
   }
 ]

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PageLayout } from './page-layout.js';
-import { UserIcon, ClockIcon, ZapIcon, KeyIcon, MessageIcon, GitBranchIcon, SettingsIcon } from './icons.js';
+import { UserIcon, ClockIcon, ZapIcon, KeyIcon, MessageIcon, GitBranchIcon, SettingsIcon, PackageIcon } from './icons.js';
 
 const TABS = [
   { id: 'general', label: 'General', href: '/admin/general', icon: SettingsIcon },
@@ -12,6 +12,7 @@ const TABS = [
   { id: 'api-keys', label: 'API Keys', href: '/admin/api-keys', icon: KeyIcon },
   { id: 'chat', label: 'Chat', href: '/admin/chat', icon: MessageIcon },
   { id: 'github', label: 'GitHub', href: '/admin/github', icon: GitBranchIcon },
+  { id: 'picklist', label: 'Picklist', href: '/admin/picklist', icon: PackageIcon },
 ];
 
 export function SettingsLayout({ session, children }) {

@@ -54,5 +54,19 @@
       { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_provider": "openai", "llm_model": "gpt-4o" }
     ],
     "enabled": false
+  },
+  {
+    "name": "picklist-scan-shipping-label",
+    "watch_path": "/webhook/picklist-scan",
+    "_comment": "Fires when a picker scans a completed picklist QR code. Configure the webhook URL to call your shipping label API (ShipStation, EasyPost, etc). The body contains picklist_id and order_ids.",
+    "actions": [
+      {
+        "type": "webhook",
+        "url": "https://example.com/shipping/print-labels",
+        "method": "POST",
+        "vars": { "source": "arrybarry-picklist" }
+      }
+    ],
+    "enabled": false
   }
 ]
