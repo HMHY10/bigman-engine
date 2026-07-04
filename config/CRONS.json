@@ -52,5 +52,19 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-check",
+    "schedule": "*/5 * * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash ../skills/active/picklist-ops/run.sh --mode=auto",
+    "enabled": true
+  },
+  {
+    "name": "picklist-morning-batch",
+    "schedule": "0 8 * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash ../skills/active/picklist-ops/run.sh --mode=morning",
+    "enabled": true
   }
 ]
