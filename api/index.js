@@ -325,6 +325,15 @@ async function POST(request) {
     return handleClusterWebhook(clusterMatch[1], clusterMatch[2], request);
   }
 
+  // Picklist routes
+  if (routePath.startsWith('/picklist/')) {
+    const { handlePrintNext25, handlePrintSelected } = await import('./picklist.js');
+    switch (routePath) {
+      case '/picklist/print-next-25':  return handlePrintNext25(request);
+      case '/picklist/print-selected': return handlePrintSelected(request);
+    }
+  }
+
   // Route to handler
   switch (routePath) {
     case '/create-job':          return handleWebhook(request);
@@ -343,6 +352,12 @@ async function GET(request) {
   // Auth check
   const authError = checkAuth(routePath, request);
   if (authError) return authError;
+
+  // Picklist pack-station label endpoint
+  if (routePath === '/picklist/print-label') {
+    const { handlePrintLabel } = await import('./picklist.js');
+    return handlePrintLabel(request);
+  }
 
   switch (routePath) {
     case '/ping':           return Response.json({ message: 'Pong!' });

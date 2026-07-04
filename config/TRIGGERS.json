@@ -1,5 +1,27 @@
 [
   {
+    "name": "picklist-print-next-25",
+    "watch_path": "/picklist/print-next-25",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/trigger.sh next-25"
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "name": "picklist-print-selected",
+    "watch_path": "/picklist/print-selected",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/trigger.sh selected '{{order_ids}}'"
+      }
+    ],
+    "enabled": true
+  },
+  {
     "name": "on-github-event",
     "watch_path": "/github/webhook",
     "actions": [

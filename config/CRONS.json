@@ -1,5 +1,12 @@
 [
   {
+    "name": "picklist-poll",
+    "schedule": "*/5 * * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/run.sh",
+    "enabled": true
+  },
+  {
     "name": "heartbeat",
     "schedule": "*/30 * * * *",
     "type": "agent",
