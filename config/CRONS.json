@@ -1,5 +1,19 @@
 [
   {
+    "name": "picklist-auto-check",
+    "schedule": "*/5 * * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/run.sh --auto",
+    "enabled": true
+  },
+  {
+    "name": "picklist-morning-batch",
+    "schedule": "0 8 * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/run.sh --morning-batch",
+    "enabled": true
+  },
+  {
     "name": "heartbeat",
     "schedule": "*/30 * * * *",
     "type": "agent",

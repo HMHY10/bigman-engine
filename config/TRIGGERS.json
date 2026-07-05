@@ -1,5 +1,38 @@
 [
   {
+    "name": "picklist-label-print",
+    "watch_path": "/webhook/picklist-label",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/run.sh --print-label {{query.order_id}}"
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "name": "picklist-print-next-25",
+    "watch_path": "/webhook/picklist-next-25",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/run.sh --print-next-25"
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "name": "picklist-print-selected",
+    "watch_path": "/webhook/picklist-selected",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- /app/skills/active/picklist-ops/run.sh --print-selected {{query.order_ids}}"
+      }
+    ],
+    "enabled": true
+  },
+  {
     "name": "on-github-event",
     "watch_path": "/github/webhook",
     "actions": [
