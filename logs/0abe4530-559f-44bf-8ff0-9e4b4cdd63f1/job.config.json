@@ -1,0 +1,4 @@
+{
+  "title": "Build picklist automation with auto-batch, time-limit, SKU grouping, and manual",
+  "job": "Build picklist automation with auto-batch, time-limit, SKU grouping, and manual override buttons\n\nImplement the full picklist generation system: (1) auto-trigger when 25 orders accumulate in the ready status, (2) time-limit fallback to print whatever is available if 25 orders not reached within ~1 hour, (3) morning batch prints ALL overnight orders grouped by SKU in one go rather than capping at 25, (4) two manual buttons — 'Print next 25' and 'Print selected orders', (5) SKU-grouped layout on pick list so same products appear together across orders, (6) QR code or scan trigger on picklist to fire shipping label print at pack station"
+}
