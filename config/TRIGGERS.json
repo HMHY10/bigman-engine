@@ -54,5 +54,41 @@
       { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_provider": "openai", "llm_model": "gpt-4o" }
     ],
     "enabled": false
+  },
+  {
+    "name": "picklist-scan",
+    "watch_path": "/webhook/picklist-scan",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- bash ./skills/active/picklist-ops/trigger-labels.sh '{{body}}'"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Pack station QR scan — fires shipping label creation for all orders in a picklist. POST body: {picklist_id: '042'}"
+  },
+  {
+    "name": "picklist-print-25",
+    "watch_path": "/webhook/picklist-print-25",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- bash ./skills/active/picklist-ops/run.sh"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Manual button: Print next 25. Forces the auto-check to run immediately. POST to /api/webhook/picklist-print-25 with x-api-key header."
+  },
+  {
+    "name": "picklist-print-selected",
+    "watch_path": "/webhook/picklist-print-selected",
+    "actions": [
+      {
+        "type": "command",
+        "command": "doppler run -p shared-services -c prd -- bash ./skills/active/picklist-ops/print-selected.sh '{{body}}'"
+      }
+    ],
+    "enabled": true,
+    "_comment": "Manual button: Print selected orders. POST body: {order_ids: [12345, 12346, ...]}. Generates picklist for those specific orders only."
   }
 ]

@@ -52,5 +52,21 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-auto-check",
+    "schedule": "*/5 * * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash ./skills/active/picklist-ops/run.sh",
+    "enabled": true,
+    "_comment": "Auto-trigger picklist when 25 ready orders accumulate or 1-hour time-limit fires"
+  },
+  {
+    "name": "picklist-morning-batch",
+    "schedule": "0 7 * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash ./skills/active/picklist-ops/morning-batch.sh",
+    "enabled": true,
+    "_comment": "7am morning batch: all overnight ready orders in one SKU-grouped picklist, no 25-cap"
   }
 ]

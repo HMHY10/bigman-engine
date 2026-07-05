@@ -293,6 +293,67 @@ bl_get_order_sources() {
   bl_request "getOrderSources" "{}"
 }
 
+# ── bl_set_order_status <order_id> <status_id> ───────────────────────
+# Set an order's status in BaseLinker. Returns 0 on success.
+bl_set_order_status() {
+  local order_id="$1" status_id="$2"
+  local params
+  params=$(jq -n \
+    --argjson oid "$order_id" \
+    --argjson sid "$status_id" \
+    '{order_id: $oid, status_id: $sid}')
+  bl_request "setOrderStatus" "$params" > /dev/null
+}
+
+# ── bl_get_order_details <order_id> ──────────────────────────────────
+# Fetch a single order by ID. Returns the order object or empty.
+bl_get_order_details() {
+  local order_id="$1"
+  local params result
+  params=$(jq -n --argjson oid "$order_id" '{order_id: $oid}')
+  result=$(bl_request "getOrders" "$params") || return 1
+  printf '%s' "$result" | jq -c '.orders[0] // empty'
+}
+
+# ── bl_create_package <order_id> <courier_code> ───────────────────────
+# Create a shipping package for an order. Returns the package object.
+# courier_code is the BaseLinker courier code (e.g. "dpd", "royalmail").
+bl_create_package() {
+  local order_id="$1" courier_code="$2"
+  local params
+  params=$(jq -n \
+    --argjson oid "$order_id" \
+    --arg courier "$courier_code" \
+    '{order_id: $oid, courier_code: $courier, fields: {}}')
+  bl_request "createPackage" "$params"
+}
+
+# ── bl_get_order_packages <order_id> ─────────────────────────────────
+# Fetch all packages/labels for an order. Returns array of package objects.
+bl_get_order_packages() {
+  local order_id="$1"
+  local params result
+  params=$(jq -n --argjson oid "$order_id" '{order_id: $oid}')
+  result=$(bl_request "getOrderPackages" "$params") || return 1
+  printf '%s' "$result" | jq -c '.packages // []'
+}
+
+# ── bl_get_label_pdf <package_id> ────────────────────────────────────
+# Get label data for a package. Returns the label object.
+bl_get_label_pdf() {
+  local package_id="$1"
+  local params
+  params=$(jq -n --argjson pid "$package_id" '{package_id: $pid}')
+  bl_request "getLabel" "$params"
+}
+
+# ── bl_get_orders_by_status <status_id> <since_timestamp> ────────────
+# Fetch all orders in a given status since a timestamp.
+bl_get_orders_by_status() {
+  local status_id="$1" since="${2:-0}"
+  bl_get_orders "$since" "$status_id"
+}
+
 # ── bl_check_po_delivery <po_json> <docs_json> <alert_domain> ────────
 # Shared PO-to-delivery matching logic for finance-ops and inventory-ops.
 # Returns number of alerts raised via stdout.
