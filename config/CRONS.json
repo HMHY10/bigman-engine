@@ -1,5 +1,21 @@
 [
   {
+    "name": "picklist-overnight",
+    "schedule": "30 7 * * 1-6",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash /app/skills/active/picklist-ops/run.sh overnight",
+    "enabled": false,
+    "_note": "Pre-open batch — all overnight orders grouped by SKU. Set PICKLIST_ORDER_STATUS_ID in Doppler before enabling."
+  },
+  {
+    "name": "picklist-daytime",
+    "schedule": "*/5 8-18 * * 1-6",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- bash /app/skills/active/picklist-ops/run.sh daytime",
+    "enabled": false,
+    "_note": "Rolling daytime batching — prints when ~25 orders queued or timeout reached. Set PICKLIST_ORDER_STATUS_ID in Doppler before enabling."
+  },
+  {
     "name": "heartbeat",
     "schedule": "*/30 * * * *",
     "type": "agent",

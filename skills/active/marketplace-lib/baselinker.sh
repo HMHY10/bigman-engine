@@ -363,3 +363,36 @@ Purchase order is ${po_age_days} days old with no corresponding goods-in documen
   log "bl_check_po_delivery: ${alert_count} alerts (short: ${short_count}, late: ${late_count})"
   printf '%d %d %d' "$alert_count" "$short_count" "$late_count"
 }
+
+# ── bl_get_order_labels <order_id> ────────────────────────────────────
+# Retrieve shipping labels for an order. Returns JSON with label data.
+# The response may include:
+#   .label_content_url — URL to download PDF label
+#   .label             — base64-encoded label content
+bl_get_order_labels() {
+  local order_id="$1"
+  local params
+  params=$(jq -n --argjson oid "$order_id" '{order_id: $oid}')
+  bl_request "getOrderLabels" "$params"
+}
+
+# ── bl_set_order_status <order_id> <status_id> ────────────────────────
+# Set the status of a single order.
+bl_set_order_status() {
+  local order_id="$1" status_id="$2"
+  local params
+  params=$(jq -n --argjson oid "$order_id" --argjson sid "$status_id" \
+    '{order_id: $oid, status_id: $sid}')
+  bl_request "setOrderStatus" "$params"
+}
+
+# ── bl_get_single_order <order_id> ───────────────────────────────────
+# Fetch a single order by ID. Returns the order object or empty.
+bl_get_single_order() {
+  local order_id="$1"
+  local params
+  params=$(jq -n --argjson oid "$order_id" '{order_id: $oid}')
+  local result
+  result=$(bl_request "getOrders" "$params") || return 1
+  printf '%s' "$result" | jq '.orders[0] // empty'
+}
