@@ -40,6 +40,18 @@ GRADUATION_MIN_CASES=10
 GRADUATION_APPROVAL_RATE=90
 GRADUATION_MIN_DAYS=7
 
+# ── Picklist Status IDs (BaseLinker order_status_id values) ───────────
+# Override via Doppler secrets. Find IDs at: BaseLinker → Orders → Statuses.
+PICKLIST_READY_STATUS_ID="${PICKLIST_READY_STATUS_ID:-}"          # "Ready to Pick"
+PICKLIST_PICKING_STATUS_ID="${PICKLIST_PICKING_STATUS_ID:-}"      # "Picking in Progress" (optional)
+PICKLIST_DISPATCHED_STATUS_ID="${PICKLIST_DISPATCHED_STATUS_ID:-}" # "Dispatched / Label Printed" (optional)
+
+# ── Picklist Batch Settings ────────────────────────────────────────────
+PICKLIST_BATCH_SIZE="${PICKLIST_BATCH_SIZE:-25}"
+PICKLIST_BATCH_WINDOW_MINUTES="${PICKLIST_BATCH_WINDOW_MINUTES:-60}"
+PICKLIST_SINCE_HOURS="${PICKLIST_SINCE_HOURS:-72}"
+PICKLIST_MORNING_SINCE_HOURS="${PICKLIST_MORNING_SINCE_HOURS:-14}"
+
 # ── Cache Defaults ─────────────────────────────────────────────────────
 CACHE_DEFAULT_MAX_AGE=24   # hours
 CACHE_ROTATION_DAYS=7

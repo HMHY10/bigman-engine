@@ -1,5 +1,19 @@
 [
   {
+    "name": "picklist-check",
+    "schedule": "*/5 * * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- /opt/bigman-engine/skills/active/picklist-ops/picklist-check.sh >> /var/log/bigman/picklist-ops.log 2>&1",
+    "enabled": true
+  },
+  {
+    "name": "picklist-morning",
+    "schedule": "0 7 * * *",
+    "type": "command",
+    "command": "doppler run -p shared-services -c prd -- /opt/bigman-engine/skills/active/picklist-ops/picklist-morning.sh >> /var/log/bigman/picklist-ops.log 2>&1",
+    "enabled": true
+  },
+  {
     "name": "heartbeat",
     "schedule": "*/30 * * * *",
     "type": "agent",
