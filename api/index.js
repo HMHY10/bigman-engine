@@ -293,6 +293,105 @@ async function handleJobStatus(request) {
   }
 }
 
+/**
+ * POST /api/orders/ingest
+ * Receive one or more orders from an external system (Shopify, WooCommerce, etc.).
+ * Body: { orders: [{externalId, source, customerName, customerAddress, lineItems, notes, receivedAt}] }
+ * OR a single order object (for simple webhook integrations).
+ * After ingesting, triggers auto-batch check if >= 25 pending orders.
+ */
+async function handleOrderIngest(request) {
+  const body = await request.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+
+  const { createOrder, countPendingOrders } = await import('../lib/db/orders.js');
+  const { runAutoBatch } = await import('../lib/picklist/batcher.js');
+
+  // Support both single order and array
+  const incoming = Array.isArray(body.orders) ? body.orders : [body];
+  const created = [];
+
+  for (const orderData of incoming) {
+    if (!orderData || typeof orderData !== 'object') continue;
+    // Dedup by externalId if provided
+    if (orderData.externalId) {
+      const { getOrderByExternalId } = await import('../lib/db/orders.js');
+      const existing = getOrderByExternalId(orderData.externalId);
+      if (existing) {
+        created.push({ id: existing.id, externalId: existing.externalId, skipped: true });
+        continue;
+      }
+    }
+    const order = createOrder(orderData);
+    created.push({ id: order.id, externalId: order.externalId });
+  }
+
+  // Check if we should auto-batch (daytime: >= 25 pending)
+  const pendingCount = countPendingOrders();
+  let autoBatched = null;
+  if (pendingCount >= 25) {
+    autoBatched = await runAutoBatch();
+  }
+
+  return Response.json({
+    ok: true,
+    created: created.length,
+    orders: created,
+    autoBatched: autoBatched ? { picklistId: autoBatched.id, orderCount: autoBatched.orderCount } : null,
+  });
+}
+
+/**
+ * POST /api/picklists/scan
+ * Called when a picker scans the QR code on a picklist after returning to packing.
+ * Body: { picklistId }
+ * Marks the picklist as completed, updates order statuses to 'picked',
+ * and returns shipping label data for each order.
+ */
+async function handlePicklistScan(request) {
+  const body = await request.json().catch(() => null);
+  if (!body?.picklistId) {
+    return Response.json({ error: 'Missing picklistId' }, { status: 400 });
+  }
+
+  const { getPicklistById, updatePicklistStatus } = await import('../lib/db/picklists.js');
+  const { updateOrdersStatus, getOrderById } = await import('../lib/db/orders.js');
+
+  const pl = getPicklistById(body.picklistId);
+  if (!pl) {
+    return Response.json({ error: 'Picklist not found' }, { status: 404 });
+  }
+  if (pl.status === 'completed') {
+    return Response.json({ ok: true, alreadyCompleted: true });
+  }
+
+  // Mark orders as picked
+  updateOrdersStatus(pl.orderIds, 'picked');
+  updatePicklistStatus(pl.id, 'completed', { completedAt: Date.now() });
+
+  // Return order details for shipping label printing
+  const orders = pl.orderIds.map((id) => getOrderById(id)).filter(Boolean);
+  const shippingLabels = orders.map((o) => ({
+    orderId: o.id,
+    externalId: o.externalId,
+    customerName: o.customerName,
+    customerAddress: o.customerAddress,
+    lineItems: o.lineItems,
+  }));
+
+  console.log(`[picklist] Scan complete: ${pl.id.slice(0, 8)} → ${orders.length} labels`);
+
+  return Response.json({
+    ok: true,
+    picklistId: pl.id,
+    orderCount: orders.length,
+    shippingLabels,
+    // The caller (warehouse scanner app / label printer) should use this data
+    // to print shipping labels via their own label printing integration.
+    printLabelsUrl: `/warehouse/picklists/${pl.id}/labels`,
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Next.js Route Handlers (catch-all)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -332,6 +431,8 @@ async function POST(request) {
     case '/telegram/webhook':   return handleTelegramWebhook(request);
     case '/telegram/register':  return handleTelegramRegister(request);
     case '/github/webhook':     return handleGithubWebhook(request);
+    case '/orders/ingest':      return handleOrderIngest(request);
+    case '/picklists/scan':     return handlePicklistScan(request);
     default:                    return Response.json({ error: 'Not found' }, { status: 404 });
   }
 }

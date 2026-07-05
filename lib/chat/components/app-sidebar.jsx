@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CirclePlusIcon, PanelLeftIcon, MessageIcon, ClusterIcon, BellIcon, RunnersIcon, ArrowUpCircleIcon, LifeBuoyIcon, GitPullRequestIcon } from './icons.js';
+import { CirclePlusIcon, PanelLeftIcon, MessageIcon, ClusterIcon, BellIcon, RunnersIcon, ArrowUpCircleIcon, LifeBuoyIcon, GitPullRequestIcon, WarehouseIcon } from './icons.js';
 import { getUnreadNotificationCount, getPullRequestCount, getAppVersion } from '../actions.js';
 import { SidebarHistory } from './sidebar-history.js';
 import { SidebarUserNav } from './sidebar-user-nav.js';
@@ -157,6 +157,24 @@ export function AppSidebar({ user }) {
                 </TooltipTrigger>
                 {collapsed && (
                   <TooltipContent side="right">Runners</TooltipContent>
+                )}
+              </Tooltip>
+            </SidebarMenuItem>
+
+            {/* Warehouse */}
+            <SidebarMenuItem>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarMenuButton
+                    href="/warehouse"
+                    className={collapsed ? 'justify-center' : ''}
+                  >
+                    <WarehouseIcon size={16} />
+                    {!collapsed && <span>Warehouse</span>}
+                  </SidebarMenuButton>
+                </TooltipTrigger>
+                {collapsed && (
+                  <TooltipContent side="right">Warehouse</TooltipContent>
                 )}
               </Tooltip>
             </SidebarMenuItem>

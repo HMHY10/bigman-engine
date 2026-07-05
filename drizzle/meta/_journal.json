@@ -127,6 +127,13 @@
       "when": 1773596413808,
       "tag": "0017_smart_trauma",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1751698835000,
+      "tag": "0018_picklist_warehouse",
+      "breakpoints": true
     }
   ]
 }

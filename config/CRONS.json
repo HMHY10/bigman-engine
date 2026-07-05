@@ -52,5 +52,13 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "_comment": "Picklist overnight batch — handled by built-in cron (07:00 daily). This entry is for reference only.",
+    "name": "picklist-overnight-batch",
+    "schedule": "0 7 * * *",
+    "type": "command",
+    "command": "node -e \"import('../node_modules/bigman-engine/lib/picklist/batcher.js').then(m => m.runOvernightBatch()).then(pl => pl ? console.log('Overnight batch:', pl.id, pl.orderCount, 'orders') : console.log('No pending orders'))\"",
+    "enabled": false
   }
 ]
