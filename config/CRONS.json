@@ -52,5 +52,19 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "picklist-overnight",
+    "schedule": "45 6 * * 1-6",
+    "type": "command",
+    "command": "cd /opt/bigman-engine/skills/active/picklist-ops && doppler run -p shared-services -c prd -- bash run.sh overnight",
+    "enabled": true
+  },
+  {
+    "name": "picklist-daytime",
+    "schedule": "*/10 8-17 * * 1-6",
+    "type": "command",
+    "command": "cd /opt/bigman-engine/skills/active/picklist-ops && doppler run -p shared-services -c prd -- bash run.sh daytime",
+    "enabled": true
   }
 ]

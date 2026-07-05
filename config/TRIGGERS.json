@@ -54,5 +54,41 @@
       { "type": "agent", "job": "Review the GitHub event and summarize what happened:\n{{body}}", "llm_provider": "openai", "llm_model": "gpt-4o" }
     ],
     "enabled": false
+  },
+  {
+    "name": "picklist-next25",
+    "watch_path": "/webhook/picklist",
+    "match": { "action": "next25" },
+    "actions": [
+      {
+        "type": "command",
+        "command": "cd /opt/bigman-engine/skills/active/picklist-ops && doppler run -p shared-services -c prd -- bash run.sh next25"
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "name": "picklist-selected",
+    "watch_path": "/webhook/picklist",
+    "match": { "action": "selected" },
+    "actions": [
+      {
+        "type": "command",
+        "command": "cd /opt/bigman-engine/skills/active/picklist-ops && doppler run -p shared-services -c prd -- bash run.sh selected {{body.orders}}"
+      }
+    ],
+    "enabled": true
+  },
+  {
+    "name": "picklist-scan-return",
+    "watch_path": "/webhook/picklist",
+    "match": { "action": "scan-return" },
+    "actions": [
+      {
+        "type": "command",
+        "command": "cd /opt/bigman-engine/skills/active/picklist-ops && doppler run -p shared-services -c prd -- bash run.sh scan-return {{body.picklist_id}}"
+      }
+    ],
+    "enabled": true
   }
 ]
